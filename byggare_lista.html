@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>List-Byggaren v1.8 | Habla Games</title>
+    <title>List-Byggaren v1.9 | Habla Games</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
         
@@ -675,9 +675,9 @@
                 "        .help-btn:hover { background-color: #e0a800; }",
                 "        .giveup-btn { background-color: #dc3545; color: #fff; padding: 8px 18px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }",
                 "        .giveup-btn:hover { background-color: #c82333; }",
-                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
+                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
                 "        #winOverlay h1 { font-size: 45px; margin-bottom: 5px; color: #ffeb3b; }",
-                "        #winOverlay p { font-size: 18px; margin-bottom: 20px; }",
+                "        #overlayDesc { font-size: 18px; margin-bottom: 20px; max-width: 400px; line-height: 1.4; }",
                 "        .stats-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; width: 100%; max-width: 300px; text-align: left; }",
                 "        .stats-box p { font-size: 16px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; color: #ddd; }",
                 "        .stats-box strong { color: #fff; font-size: 20px; }",
@@ -996,18 +996,25 @@
                 "        ",
                 "        function showEndScreen(title, desc, own, cheated, isWarning) {",
                 "            document.getElementById('overlayTitle').innerText = title;",
-                "            document.getElementById('overlayDesc').innerText = desc;",
+                "            document.getElementById('overlayDesc').innerHTML = desc;",
                 "            document.getElementById('statTotal').innerText = totalLetters;",
                 "            document.getElementById('statOwn').innerText = own;",
                 "            document.getElementById('statCheated').innerText = cheated;",
                 "            ",
+                "            const overlay = document.getElementById('winOverlay');",
+                "            const titleEl = document.getElementById('overlayTitle');",
+                "            ",
                 "            if(isWarning) {",
                 "                keepTryingBtn.style.display = 'inline-block';",
+                "                overlay.style.background = 'rgba(60, 10, 10, 0.95)';",
+                "                titleEl.style.color = '#ff9800';",
                 "            } else {",
                 "                keepTryingBtn.style.display = 'none';",
+                "                overlay.style.background = 'rgba(0, 0, 0, 0.95)';",
+                "                titleEl.style.color = '#ffeb3b';",
                 "            }",
                 "            ",
-                "            document.getElementById('winOverlay').style.display = 'flex';",
+                "            overlay.style.display = 'flex';",
                 "            mobileInput.blur();",
                 "        }",
                 "        ",
@@ -1041,7 +1048,7 @@
                 "                    localStorage.removeItem(safeSaveKey);",
                 "                } else if (!hasShownFullBoardWarning) {",
                 "                    hasShownFullBoardWarning = true;",
-                "                    showEndScreen('🧐 NÄSTAN DÄR! 🧐', `Du har fyllt i alla rutor, men du har ${totalLetters - correctCount} fel. Leta vidare eller ge upp!`, totalLetters - revealedCells.size, revealedCells.size, true);",
+                "                    showEndScreen('🛑 NÅGOT STÄMMER INTE... 🛑', `Du har fyllt i alla rutor, men <strong style=\"color:#ff9800;\">${totalLetters - correctCount} bokstäver är fel!</strong><br><br>Vill du fortsätta leta efter felet, eller vill du ge upp och se facit?`, totalLetters - revealedCells.size, revealedCells.size, true);",
                 "                }",
                 "            } else {",
                 "                hasShownFullBoardWarning = false;",

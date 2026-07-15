@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Min Korsordsbyggare v6.18</title>
+    <title>Min Korsordsbyggare v6.19</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
         
@@ -1119,9 +1119,9 @@
                 "        .cell.selected { outline: 3px solid #ff007f; z-index: 10; background-color: #ffe6f0; }",
                 "        .cell.correct { color: #155724; }",
                 "        #mobileInput { position: absolute; opacity: 0; width: 1px; height: 1px; border: none; padding: 0; margin: 0; pointer-events: none; }",
-                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
+                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
                 "        #winOverlay h1 { font-size: 45px; margin-bottom: 5px; color: #ffeb3b; }",
-                "        #winOverlay p { font-size: 18px; margin-bottom: 20px; }",
+                "        #overlayDesc { font-size: 18px; margin-bottom: 20px; max-width: 400px; line-height: 1.4; }",
                 "        .stats-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; width: 100%; max-width: 300px; text-align: left; }",
                 "        .stats-box p { font-size: 16px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; color: #ddd; }",
                 "        .stats-box strong { color: #fff; font-size: 20px; }",
@@ -1433,18 +1433,25 @@
                 "        ",
                 "        function showEndScreen(title, desc, own, cheated, isWarning) {",
                 "            document.getElementById('overlayTitle').innerText = title;",
-                "            document.getElementById('overlayDesc').innerText = desc;",
+                "            document.getElementById('overlayDesc').innerHTML = desc;",
                 "            document.getElementById('statTotal').innerText = totalLetters;",
                 "            document.getElementById('statOwn').innerText = own;",
                 "            document.getElementById('statCheated').innerText = cheated;",
                 "            ",
+                "            const overlay = document.getElementById('winOverlay');",
+                "            const titleEl = document.getElementById('overlayTitle');",
+                "            ",
                 "            if(isWarning) {",
                 "                keepTryingBtn.style.display = 'inline-block';",
+                "                overlay.style.background = 'rgba(60, 10, 10, 0.95)';",
+                "                titleEl.style.color = '#ff9800';",
                 "            } else {",
                 "                keepTryingBtn.style.display = 'none';",
+                "                overlay.style.background = 'rgba(0, 0, 0, 0.95)';",
+                "                titleEl.style.color = '#ffeb3b';",
                 "            }",
                 "            ",
-                "            document.getElementById('winOverlay').style.display = 'flex';",
+                "            overlay.style.display = 'flex';",
                 "            mobileInput.blur();",
                 "        }",
                 "        ",
@@ -1478,7 +1485,7 @@
                 "                    localStorage.removeItem(safeSaveKey);",
                 "                } else if (!hasShownFullBoardWarning) {",
                 "                    hasShownFullBoardWarning = true;",
-                "                    showEndScreen('🧐 NÄSTAN DÄR! 🧐', `Du har fyllt i alla rutor, men du har ${totalLetters - correctCount} fel. Leta vidare eller ge upp!`, totalLetters - revealedCells.size, revealedCells.size, true);",
+                "                    showEndScreen('🛑 NÅGOT STÄMMER INTE... 🛑', `Du har fyllt i alla rutor, men <strong style=\"color:#ff9800;\">${totalLetters - correctCount} bokstäver är fel!</strong><br><br>Vill du fortsätta leta efter felet, eller vill du ge upp och se facit?`, totalLetters - revealedCells.size, revealedCells.size, true);",
                 "                }",
                 "            } else {",
                 "                hasShownFullBoardWarning = false;",
