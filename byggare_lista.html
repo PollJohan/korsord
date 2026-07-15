@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List-Byggaren v1.5 | Habla Games</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
+        
+        .top-nav { position: fixed; top: 15px; left: 20px; z-index: 999; display: flex; gap: 10px; }
+        .nav-btn { background: #007bff; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); transition: background 0.2s; }
+        .nav-btn:hover { background: #0056b3; }
+        .zoom-controls { background: white; padding: 8px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); display: flex; gap: 8px; align-items: center; font-weight: bold; font-size: 14px; }
+        .zoom-controls button { padding: 3px 10px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; }
+        .zoom-controls button:hover { background: #e9e9e9; }
+
+        .workspace-wrapper { transform-origin: top left; transition: transform 0.2s ease-out; margin-top: 10px; }
+        
+        .puzzle-header { margin-left: 32px; margin-bottom: 15px; color: #333; }
+        .puzzle-header h1 { margin: 0; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+        .puzzle-header p { margin: 2px 0 0 0; font-size: 14px; font-style: italic; color: #666; }
+
+        .workspace { display: grid; grid-template-columns: 30px max-content; grid-template-rows: 30px max-content; }
+        .ruler-x { display: grid; gap: 0; padding-left: 2px; }
+        .ruler-y { display: grid; gap: 0; padding-top: 2px; }
+        .ruler-cell-x { width: 40px; display: flex; align-items: flex-end; justify-content: center; font-size: 10px; color: #999; font-weight: bold; padding-bottom: 3px; }
+        .ruler-cell-y { height: 40px; display: flex; align-items: center; justify-content: flex-end; font-size: 10px; color: #999; font-weight: bold; padding-right: 5px; }
+        
+        .grid-container { display: grid; gap: 0; background-color: #000; border: 2px solid #000; width: max-content; }
+        
+        .cell { width: 40px; height: 40px; background-color: white; border: 1px solid #666; position: relative; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; user-select: none; text-transform: uppercase; box-sizing: border-box; }
+        .cell.black { background-color: #222; border-color: #000; }
+        .cell.selected { outline: 3px solid #ff007f; outline-offset: -3px; z-index: 10; background-color: #ffe6f0; }
+        
+        .cell-number { position: absolute; top: 1px; left: 2px; font-size: 10px; font-weight: normal; color: #333; }
+
+        .panel { background: white; padding: 0 20px 20px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 360px; height: 85vh; display: flex; flex-direction: column; position: fixed; top: 20px; right: 20px; z-index: 1000; border: 1px solid #ccc; }
+        
+        .panel-header { background: #17a2b8; color: white; margin: 0 -20px 15px -20px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .panel-header:active { cursor: grabbing; }
+
+        .panel-content { flex-grow: 1; overflow-y: auto; padding-right: 5px; }
+
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; margin-top: 15px; }
+        input[type="text"] { width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: Arial, sans-serif; }
+        
+        .toggle-box { background: #e8f4ff; border: 1px solid #b8daff; padding: 10px; border-radius: 6px; margin-top: 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .toggle-box input { cursor: pointer; width: 18px; height: 18px; }
+        
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+        
+        .btn { padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; font-size: 12px; width: 100%; margin-top: 5px; }
+        .btn-export { background-color: #ffc107; color: #000; font-size: 14px; padding: 12px; }
+        .btn-export:hover { background-color: #e0a800; }
+        .btn-resize { background-color: #6c757d; }
+        .btn-resize:hover { background-color: #5a6268; }
+        .resize-btns { display: flex; gap: 5px; margin-top: 5px; }
+        .save-load-btns { display: flex; gap: 5px; margin-top: 5px; }
+        .btn-save { background-color: #28a745; }
+        .btn-load { background-color: #17a2b8; }
+        
+        .autosave-section { margin-top: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #ddd; }
+        .autosave-section label { margin-top: 0; font-weight: normal; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        #lastSavedText { font-size: 11px; color: #666; margin-top: 8px; margin-bottom: 0; font-style: italic; }
+
+        /* CLUE LISTS */
+        .clue-section { margin-top: 15px; }
+        .clue-list { display: flex; flex-direction: column; gap: 5px; }
+        .clue-row { display: flex; gap: 5px; align-items: flex-start; }
+        .clue-num { background: #333; color: white; padding: 6px 0; width: 30px; text-align: center; border-radius: 4px; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+        .clue-input { flex-grow: 1; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        h3 { font-size: 16px; margin-bottom: 10px; color: #007bff; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <a href="korsords_byggare.html" class="nav-btn">← Tillbaka till Svensk Byggare</a>
+        <div class="zoom-controls">
+            <span>🔍 Zoom:</span>
+            <button onclick="changeZoom(-0.1)">-</button>
+            <span id="zoomLevelText">100%</span>
+            <button onclick="changeZoom(0.1)">+</button>
+        </div>
+    </div>
+
+    <div class="workspace-wrapper" id="workspaceWrapper">
+        <div class="puzzle-header">
+            <h1 id="displayTitle">Mitt List-Korsord</h1>
+            <p id="displayAuthor">Av: Pöll-Johan Lindroos</p>
+        </div>
+        
+        <div class="workspace">
+            <div></div>
+            <div id="colRuler" class="ruler-x"></div>
+            <div id="rowRuler" class="ruler-y"></div>
+            <div id="grid" class="grid-container"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel">
+        <div class="panel-header" id="panelHeader">
+            <span>📝 List-Verktyg</span>
+            <span style="font-size: 11px; font-weight: normal; opacity: 0.8;">(Dra mig)</span>
+        </div>
+        
+        <div class="panel-content">
+            
+            <label style="margin-top:0;">Skapa nytt (Raderar nuvarande!)</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(10, 10)">10x10</button>
+                <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(15, 15)">15x15</button>
+                <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(21, 21)">21x21</button>
+            </div>
+            <hr style="margin-top:0;">
+
+            <label style="margin-top:0;">Korsordsinfo</label>
+            <input type="text" id="puzzleTitle" placeholder="Titel" value="Mitt List-Korsord">
+            <input type="text" id="puzzleAuthor" placeholder="Skapare" value="Av: Pöll-Johan Lindroos">
+
+            <label class="toggle-box">
+                <input type="checkbox" id="symmetryToggle" checked>
+                <div>
+                    <strong>Symmetri-lås 🦋</strong><br>
+                    <span style="font-size:11px; color:#666;">Sätter automatiskt ut spegelvända svarta rutor.</span>
+                </div>
+            </label>
+
+            <div id="editor" style="display:none; margin-top: 15px; background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px;">
+                <label style="margin-top:0; font-size: 12px;">Svar för markerad ruta:</label>
+                <input type="text" id="cellAnswer" maxlength="1" placeholder="T.ex. A" style="font-size: 16px; font-weight: bold; text-align: center; width: 50px;">
+            </div>
+
+            <hr>
+
+            <label style="margin-top:0;">Knuffa hela rutnätet (<span id="gridSizeText">15x15</span>)</label>
+            <div class="resize-btns">
+                <button class="btn btn-resize" onclick="resizeGrid(1,0,0,0)">+ Rad Uppe</button>
+                <button class="btn btn-resize" onclick="resizeGrid(-1,0,0,0)">- Rad Uppe</button>
+                <button class="btn btn-resize" onclick="resizeGrid(0,1,0,0)">+ Rad Nere</button>
+                <button class="btn btn-resize" onclick="resizeGrid(0,-1,0,0)">- Rad Nere</button>
+            </div>
+            <div class="resize-btns">
+                <button class="btn btn-resize" onclick="resizeGrid(0,0,1,0)">+ Kol Vänster</button>
+                <button class="btn btn-resize" onclick="resizeGrid(0,0,-1,0)">- Kol Vänster</button>
+                <button class="btn btn-resize" onclick="resizeGrid(0,0,0,1)">+ Kol Höger</button>
+                <button class="btn btn-resize" onclick="resizeGrid(0,0,0,-1)">- Kol Höger</button>
+            </div>
+
+            <hr>
+            
+            <div class="clue-section">
+                <h3>Vågrätt (Across)</h3>
+                <div id="acrossClues" class="clue-list"></div>
+            </div>
+
+            <div class="clue-section">
+                <h3>Lodrätt (Down)</h3>
+                <div id="downClues" class="clue-list"></div>
+            </div>
+
+            <hr>
+
+            <label style="margin-top:0;">Filsystem (Utkast)</label>
+            <div class="save-load-btns">
+                <button class="btn btn-save" onclick="downloadDraftFile()">Spara fil (Utkast)</button>
+                <button class="btn btn-load" onclick="document.getElementById('loadInput').click()">Ladda fil</button>
+                <input type="file" id="loadInput" accept=".json" style="display: none;" onchange="loadDraftFromFile(event)">
+            </div>
+            
+            <div class="autosave-section">
+                <label>
+                    <input type="checkbox" id="autoSaveToggle" checked> 
+                    Autospara i bakgrunden
+                </label>
+                <p id="lastSavedText">Senast sparad: Aldrig</p>
+            </div>
+
+            <hr>
+            <button class="btn btn-export" onclick="exportListGame()">Exportera Spel (HTML) 🚀</button>
+            <p style="font-size: 10px; color: #888; text-align: center;">Spelet exporteras med sidoställda ledtrådar.</p>
+        </div>
+    </div>
+
+    <script>
+        const gridElement = document.getElementById('grid');
+        const colRulerElement = document.getElementById('colRuler');
+        const rowRulerElement = document.getElementById('rowRuler');
+        const gridSizeText = document.getElementById('gridSizeText');
+        
+        const puzzleTitleInput = document.getElementById('puzzleTitle');
+        const puzzleAuthorInput = document.getElementById('puzzleAuthor');
+        const displayTitle = document.getElementById('displayTitle');
+        const displayAuthor = document.getElementById('displayAuthor');
+        const symmetryToggle = document.getElementById('symmetryToggle');
+        
+        const cellAnswerInput = document.getElementById('cellAnswer');
+        const editor = document.getElementById('editor');
+        
+        const acrossCluesContainer = document.getElementById('acrossClues');
+        const downCluesContainer = document.getElementById('downClues');
+        
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const lastSavedText = document.getElementById('lastSavedText');
+
+        // Standardstorlek för amerikanska korsord är 15x15
+        let rows = 15;
+        let cols = 15;
+        let gridData = [];
+        let clueData = { across: {}, down: {} };
+        let numbering = []; 
+        let selectedCellIndex = null;
+
+        let currentZoom = 1.0;
+        const workspaceWrapper = document.getElementById('workspaceWrapper');
+        const zoomLevelText = document.getElementById('zoomLevelText');
+
+        // DRAG PANEL LOGIC
+        const panel = document.getElementById('panel');
+        const panelHeader = document.getElementById('panelHeader');
+        let isDraggingPanel = false;
+        let dragStartX, dragStartY, panelInitialX, panelInitialY;
+
+        panelHeader.addEventListener('mousedown', function(e) {
+            isDraggingPanel = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            const rect = panel.getBoundingClientRect();
+            panelInitialX = rect.left;
+            panelInitialY = rect.top;
+            panel.style.right = 'auto'; 
+            panel.style.left = panelInitialX + 'px';
+            panel.style.top = panelInitialY + 'px';
+            document.addEventListener('mousemove', onPanelDrag);
+            document.addEventListener('mouseup', stopPanelDrag);
+        });
+
+        function onPanelDrag(e) {
+            if (!isDraggingPanel) return;
+            panel.style.left = (panelInitialX + (e.clientX - dragStartX)) + 'px';
+            panel.style.top = (panelInitialY + (e.clientY - dragStartY)) + 'px';
+        }
+
+        function stopPanelDrag() {
+            isDraggingPanel = false;
+            document.removeEventListener('mousemove', onPanelDrag);
+            document.removeEventListener('mouseup', stopPanelDrag);
+        }
+
+        puzzleTitleInput.addEventListener('input', () => displayTitle.innerText = puzzleTitleInput.value);
+        puzzleAuthorInput.addEventListener('input', () => displayAuthor.innerText = puzzleAuthorInput.value);
+
+        function changeZoom(amount) {
+            currentZoom += amount;
+            if (currentZoom < 0.4) currentZoom = 0.4;
+            if (currentZoom > 2.0) currentZoom = 2.0;
+            workspaceWrapper.style.transform = `scale(${currentZoom})`;
+            zoomLevelText.innerText = Math.round(currentZoom * 100) + '%';
+        }
+
+        function createNewPuzzle(newRows, newCols) {
+            if (!confirm("Vill du verkligen börja om? Du förlorar ditt nuvarande bygge.")) return;
+            rows = newRows;
+            cols = newCols;
+            clueData = { across: {}, down: {} };
+            selectedCellIndex = null;
+            editor.style.display = 'none';
+            localStorage.removeItem('list_korsord_autosave');
+            initGrid();
+            lastSavedText.innerText = "Skapade ett nytt tomt rutnät.";
+        }
+
+        function resizeGrid(addTop, addBottom, addLeft, addRight) {
+            const newRows = rows + addTop + addBottom;
+            const newCols = cols + addLeft + addRight;
+            if (newRows < 1 || newCols < 1) return;
+
+            const newData = [];
+            for (let r = 0; r < newRows; r++) {
+                for (let c = 0; c < newCols; c++) {
+                    const oldR = r - addTop;
+                    const oldC = c - addLeft;
+
+                    if (oldR >= 0 && oldR < rows && oldC >= 0 && oldC < cols) {
+                        newData.push(gridData[oldR * cols + oldC]);
+                    } else {
+                        newData.push({ isBlack: false, answer: '' });
+                    }
+                }
+            }
+
+            rows = newRows;
+            cols = newCols;
+            gridData = newData;
+            selectedCellIndex = null;
+            editor.style.display = 'none';
+            
+            renderGrid();
+            autoSaveToBrowser();
+        }
+
+        function initGrid() {
+            gridData = [];
+            for (let i = 0; i < rows * cols; i++) {
+                gridData.push({ isBlack: false, answer: '' });
+            }
+            renderGrid();
+        }
+
+        function renderRulers() {
+            colRulerElement.innerHTML = '';
+            rowRulerElement.innerHTML = '';
+            colRulerElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+            rowRulerElement.style.gridAutoRows = `40px`;
+
+            for (let c = 1; c <= cols; c++) {
+                const div = document.createElement('div');
+                div.className = 'ruler-cell-x'; div.innerText = c;
+                colRulerElement.appendChild(div);
+            }
+            for (let r = 1; r <= rows; r++) {
+                const div = document.createElement('div');
+                div.className = 'ruler-cell-y'; div.innerText = r;
+                rowRulerElement.appendChild(div);
+            }
+        }
+
+        function calculateNumbering() {
+            numbering = [];
+            let currentNum = 1;
+            let currentAcross = [];
+            let currentDown = [];
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const idx = r * cols + c;
+                    const cell = gridData[idx];
+                    
+                    if (cell.isBlack) {
+                        numbering.push(null);
+                        continue;
+                    }
+
+                    // Kolla om detta är starten på ett ord
+                    const leftIsBlackOrBorder = (c === 0 || gridData[idx - 1].isBlack);
+                    const rightIsWhite = (c < cols - 1 && !gridData[idx + 1].isBlack);
+                    const isAcrossStart = leftIsBlackOrBorder && rightIsWhite;
+
+                    const topIsBlackOrBorder = (r === 0 || gridData[idx - cols].isBlack);
+                    const bottomIsWhite = (r < rows - 1 && !gridData[idx + cols].isBlack);
+                    const isDownStart = topIsBlackOrBorder && bottomIsWhite;
+
+                    if (isAcrossStart || isDownStart) {
+                        numbering.push(currentNum);
+                        if (isAcrossStart) currentAcross.push(currentNum);
+                        if (isDownStart) currentDown.push(currentNum);
+                        currentNum++;
+                    } else {
+                        numbering.push(null);
+                    }
+                }
+            }
+            
+            // Uppdatera ledtrådsobjektet (behåll gamla, lägg till nya)
+            const newClueData = { across: {}, down: {} };
+            currentAcross.forEach(num => { newClueData.across[num] = clueData.across[num] || ""; });
+            currentDown.forEach(num => { newClueData.down[num] = clueData.down[num] || ""; });
+            clueData = newClueData;
+
+            renderClueInputs();
+        }
+
+        function renderClueInputs() {
+            acrossCluesContainer.innerHTML = '';
+            downCluesContainer.innerHTML = '';
+
+            Object.keys(clueData.across).sort((a,b)=>a-b).forEach(num => {
+                acrossCluesContainer.appendChild(createClueRow('across', num));
+            });
+
+            Object.keys(clueData.down).sort((a,b)=>a-b).forEach(num => {
+                downCluesContainer.appendChild(createClueRow('down', num));
+            });
+        }
+
+        function createClueRow(direction, num) {
+            const row = document.createElement('div');
+            row.className = 'clue-row';
+            
+            const label = document.createElement('div');
+            label.className = 'clue-num';
+            label.innerText = num;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'clue-input';
+            input.value = clueData[direction][num];
+            input.placeholder = "Skriv ledtråd...";
+            input.addEventListener('input', (e) => {
+                clueData[direction][num] = e.target.value;
+            });
+
+            row.appendChild(label);
+            row.appendChild(input);
+            return row;
+        }
+
+        function renderGrid() {
+            gridSizeText.innerText = `${cols}x${rows}`;
+            calculateNumbering();
+            renderRulers();
+            
+            gridElement.innerHTML = '';
+            gridElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+            
+            gridData.forEach((data, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (data.isBlack ? ' black' : '');
+                if (index === selectedCellIndex && !data.isBlack) cell.classList.add('selected');
+                
+                if (!data.isBlack && numbering[index] !== null) {
+                    const numSpan = document.createElement('span');
+                    numSpan.className = 'cell-number';
+                    numSpan.innerText = numbering[index];
+                    cell.appendChild(numSpan);
+                }
+
+                if (!data.isBlack && data.answer) {
+                    const ans = document.createTextNode(data.answer);
+                    cell.appendChild(ans);
+                }
+
+                // KLICKA PÅ RUTA LOGIK
+                cell.addEventListener('click', (e) => {
+                    // Om vi håller in Shift, eller om det är ett dubbelklick: Växla svart/vit ruta
+                    if (e.shiftKey || e.detail === 2) {
+                        toggleBlackSquare(index);
+                    } else {
+                        // Välj rutan för att skriva facit
+                        if (!data.isBlack) {
+                            selectedCellIndex = index;
+                            editor.style.display = 'block';
+                            cellAnswerInput.value = data.answer;
+                            cellAnswerInput.focus();
+                            cellAnswerInput.select();
+                            renderGrid(); // Ommåla för att visa rosa outline
+                        }
+                    }
+                });
+                
+                // Högerklick = växla svart/vit ruta (för musanvändare)
+                cell.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    toggleBlackSquare(index);
+                });
+
+                gridElement.appendChild(cell);
+            });
+        }
+
+        function toggleBlackSquare(index) {
+            gridData[index].isBlack = !gridData[index].isBlack;
+            gridData[index].answer = ''; // Töm svar
+            
+            if (symmetryToggle.checked) {
+                // Beräkna spegelvänd ruta (180 grader)
+                const mirrorIndex = (rows * cols - 1) - index;
+                if (mirrorIndex !== index) {
+                    gridData[mirrorIndex].isBlack = gridData[index].isBlack;
+                    gridData[mirrorIndex].answer = '';
+                }
+            }
+
+            if (selectedCellIndex === index || (symmetryToggle.checked && selectedCellIndex === ((rows * cols - 1) - index))) {
+                selectedCellIndex = null;
+                editor.style.display = 'none';
+            }
+            renderGrid();
+        }
+
+        cellAnswerInput.addEventListener('input', function(e) {
+            if (selectedCellIndex === null) return;
+            const val = this.value.toUpperCase();
+            this.value = val;
+            gridData[selectedCellIndex].answer = val;
+            renderGrid();
+            
+            // Hoppa automatiskt till nästa ruta (vågrätt)
+            if (val !== '') {
+                let nextIdx = selectedCellIndex + 1;
+                if (nextIdx < rows * cols && !gridData[nextIdx].isBlack) {
+                    selectedCellIndex = nextIdx;
+                    this.value = gridData[nextIdx].answer;
+                    renderGrid();
+                    this.focus();
+                    this.select();
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (selectedCellIndex === null) return;
+            if (document.activeElement.tagName === 'INPUT' && document.activeElement.id !== 'cellAnswer') return;
+            
+            if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+                e.preventDefault();
+                let newIdx = selectedCellIndex;
+                if (e.key === 'ArrowRight' && newIdx % cols < cols - 1) newIdx++;
+                else if (e.key === 'ArrowLeft' && newIdx % cols > 0) newIdx--;
+                else if (e.key === 'ArrowDown' && newIdx < cols * (rows - 1)) newIdx += cols;
+                else if (e.key === 'ArrowUp' && newIdx >= cols) newIdx -= cols;
+                
+                if (newIdx !== selectedCellIndex && !gridData[newIdx].isBlack) {
+                    selectedCellIndex = newIdx;
+                    cellAnswerInput.value = gridData[newIdx].answer;
+                    renderGrid();
+                    cellAnswerInput.focus();
+                    cellAnswerInput.select();
+                }
+            }
+        });
+
+        // ==========================================
+        // SPARA / LADDA JSON UTKAST
+        // ==========================================
+        function getSaveData() {
+            return {
+                rows: rows,
+                cols: cols,
+                title: puzzleTitleInput.value,
+                author: puzzleAuthorInput.value,
+                symmetry: symmetryToggle.checked,
+                grid: gridData,
+                clues: clueData
+            };
+        }
+
+        function downloadDraftFile() {
+            const saveObject = getSaveData();
+            const blob = new Blob([JSON.stringify(saveObject)], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", url);
+            downloadAnchorNode.setAttribute("download", "list_korsord_utkast.json");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadDraftFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let parsed = JSON.parse(e.target.result);
+                    applyLoadedData(parsed);
+                    document.getElementById('loadInput').value = '';
+                    lastSavedText.innerText = "Laddade in pussel från fil!";
+                } catch(err) {
+                    alert("Kunde inte läsa filen. Är du säker på att det är ett korsords-utkast?");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function applyLoadedData(parsed) {
+            rows = parsed.rows || 15;
+            cols = parsed.cols || 15;
+            puzzleTitleInput.value = parsed.title || "";
+            puzzleAuthorInput.value = parsed.author || "";
+            displayTitle.innerText = parsed.title || "Mitt List-Korsord";
+            displayAuthor.innerText = parsed.author || "Av: Pöll-Johan Lindroos";
+            
+            if (parsed.symmetry !== undefined) {
+                symmetryToggle.checked = parsed.symmetry;
+            } else {
+                symmetryToggle.checked = true;
+            }
+            
+            gridData = parsed.grid || [];
+            clueData = parsed.clues || { across: {}, down: {} };
+            
+            selectedCellIndex = null;
+            editor.style.display = 'none';
+            renderGrid();
+        }
+
+        function autoSaveToBrowser() {
+            if (!autoSaveToggle.checked) return;
+            const saveObject = getSaveData();
+            localStorage.setItem('list_korsord_autosave', JSON.stringify(saveObject));
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastSavedText.innerText = "Autosparad i webbläsaren: " + timeString;
+        }
+
+        setInterval(autoSaveToBrowser, 5000);
+
+        window.onload = function() {
+            const savedData = localStorage.getItem('list_korsord_autosave');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    applyLoadedData(parsed);
+                    lastSavedText.innerText = "Återställde ditt senaste utkast automatiskt!";
+                } catch(err) {
+                    console.error("Kunde inte ladda autosparat utkast.");
+                    initGrid();
+                }
+            } else {
+                initGrid();
+            }
+        };
+
+        // ==========================================
+        // EXPORT TILL SPELBAR HTML
+        // ==========================================
+        function exportListGame() {
+            const gTitle = puzzleTitleInput.value || "List-Korsord";
+            const safeTitle = gTitle.replace(/[^a-zA-Z0-9åäöÅÄÖ]/g, '');
+            const counterUrl = `https://api.visitorbadge.io/api/visitors?path=PollJohan.listkorsord.${safeTitle}&label=Bes%C3%B6kare&countColor=%23007bff`;
+            const gAuthor = puzzleAuthorInput.value || "";
+            
+            const exportData = JSON.stringify({
+                rows: rows,
+                cols: cols,
+                title: gTitle,
+                author: gAuthor,
+                grid: gridData,
+                numbering: numbering,
+                clues: clueData
+            });
+
+            let htmlLines = [
+                "<!DOCTYPE html>",
+                "<html lang='sv'>",
+                "<head>",
+                "    <meta charset='UTF-8'>",
+                "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>",
+                `    <title>${gTitle}</title>`,
+                "    <style>",
+                "        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px 20px 100px 20px; color: #333; overflow-x: hidden; }",
+                "        .header { text-align: center; margin-bottom: 30px; }",
+                "        .header h1 { margin: 0 0 5px 0; font-size: 32px; text-transform: uppercase; letter-spacing: 2px; }",
+                "        .header p { margin: 0; color: #666; font-style: italic; }",
+                "        .social-bar { margin-top: 15px; display: flex; justify-content: center; gap: 15px; font-size: 14px; }",
+                "        .social-bar a { text-decoration: none; font-weight: bold; transition: opacity 0.2s; color: #666; }",
+                "        .social-bar a:hover { opacity: 0.7; }",
+                "        .game-layout { display: flex; flex-wrap: wrap; gap: 30px; max-width: 1000px; margin: 20px auto 0 auto; justify-content: center; align-items: flex-start; }",
+                "        .grid-section { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }",
+                "        .grid { display: grid; border: 2px solid #000; gap: 0; background: #000; }",
+                "        .cell { width: 35px; height: 35px; background: white; position: relative; border: 1px solid #777; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; text-transform: uppercase; }",
+                "        .cell.black { background: #222; border-color: #000; cursor: default; }",
+                "        .cell.selected { background-color: #ffeb3b; }",
+                "        .cell.highlighted { background-color: #fff9c4; }",
+                "        .cell .num { position: absolute; top: 1px; left: 2px; font-size: 10px; color: #333; }",
+                "        .clues-section { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-height: 80vh; overflow-y: auto; }",
+                "        .clue-list-title { color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 0; }",
+                "        .clue-item { display: flex; margin-bottom: 8px; font-size: 14px; cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s; }",
+                "        .clue-item:hover { background: #f0f8ff; }",
+                "        .clue-item.active { background: #e0f0ff; font-weight: bold; color: #0056b3; }",
+                "        .clue-item strong { margin-right: 8px; width: 25px; text-align: right; flex-shrink: 0; }",
+                "        .top-btn { display: inline-block; color: #fff; text-decoration: none; font-size: 12px; font-weight: bold; background: #333; padding: 8px 16px; border-radius: 20px; border: 1px solid #555; cursor: pointer; transition: all 0.2s ease; margin: 0 5px; }",
+                "        .top-btn:hover { background: #444; border-color: #777; }",
+                "        .top-btn.print-btn { background: #007bff; border-color: #0056b3; }",
+                "        .top-btn.print-btn:hover { background: #0056b3; }",
+                "        .floating-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: rgba(20, 20, 20, 0.95); padding: 10px 15px; border-radius: 40px; border: 1px solid #555; display: flex; align-items: center; gap: 15px; z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.6); white-space: nowrap; }",
+                "        #scoreCounter { color: #fff; font-size: 15px; font-weight: bold; margin-left: 5px; }",
+                "        #helpBtn { background-color: #ffc107; color: #000; padding: 8px 18px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }",
+                "        #helpBtn:hover { background-color: #e0a800; }",
+                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
+                "        #winOverlay h1 { font-size: 45px; margin-bottom: 5px; color: #ffeb3b; }",
+                "        #winOverlay p { font-size: 18px; margin-bottom: 20px; }",
+                "        .stats-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; width: 100%; max-width: 300px; text-align: left; }",
+                "        .stats-box p { font-size: 16px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; color: #ddd; }",
+                "        .stats-box strong { color: #fff; font-size: 20px; }",
+                "        .confetti { position: absolute; width: 10px; height: 10px; opacity: 0; z-index: 1999; }",
+                "        #mobileInput { position: absolute; opacity: 0; pointer-events: none; }",
+                "        @media print {",
+                "            body { background-color: white !important; }",
+                "            .social-bar, .top-btn, #mobileInput, .floating-bar, #winOverlay, .game-footer { display: none !important; }",
+                "            .clues-section { max-height: none; box-shadow: none; }",
+                "            .grid-section { box-shadow: none; }",
+                "            .cell.selected, .cell.highlighted { background-color: white !important; }",
+                "            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }",
+                "        }",
+                "        @media (max-width: 768px) { .game-layout { flex-direction: column; align-items: center; } .cell { width: 30px; height: 30px; font-size: 16px; } .clues-section { max-height: none; width: 100%; box-sizing: border-box; } }",
+                "    </style>",
+                "</head>",
+                "<body>",
+                "    <div class='header'>",
+                `        <h1>${gTitle}</h1>`,
+                `        <p>${gAuthor}</p>`,
+                "        <div class='social-bar'>",
+                "            <a href='https://www.instagram.com/johan_lindroos/' target='_blank' style='color: #E1306C;'>📷 Instagram</a>",
+                "            <a href='https://www.youtube.com/@JohanTeeVee' target='_blank' style='color: #FF0000;'>📺 YouTube</a>",
+                "            <a href='https://www.tiktok.com/@johan_lindroos' target='_blank' style='color: #000;'>🎵 TikTok</a>",
+                "        </div>",
+                "        <div style='margin-top: 15px;'>",
+                "            <a href='index.html' class='top-btn'>← Alla korsord</a>",
+                "            <button onclick='window.print()' class='top-btn print-btn'>🖨️ Skriv ut / PDF</button>",
+                "        </div>",
+                "    </div>",
+                "    <div class='game-layout'>",
+                "        <div class='grid-section'>",
+                "            <div id='grid' class='grid'></div>",
+                "        </div>",
+                "        <div class='clues-section'>",
+                "            <h3 class='clue-list-title'>Vågrätt</h3>",
+                "            <div id='acrossList'></div>",
+                "            <h3 class='clue-list-title' style='margin-top: 20px;'>Lodrätt</h3>",
+                "            <div id='downList'></div>",
+                "        </div>",
+                "    </div>",
+                "    <div class='floating-bar'>",
+                "        <div id='scoreCounter'>0 / 0 rätt</div>",
+                "        <button id='helpBtn'>💡 Avslöja</button>",
+                "    </div>",
+                "    <div id='winOverlay'>",
+                "        <h1>🎉 GRATTIS! 🎉</h1>",
+                "        <p>Du har löst hela list-korsordet!</p>",
+                "        <div class='stats-box'>",
+                "            <p><span>Dina egna svar:</span> <strong id='statOwn' style='color:#28a745;'>0</strong></p>",
+                "            <p><span>Tagit hjälp:</span> <strong id='statCheated' style='color:#ffc107;'>0</strong></p>",
+                "            <hr style='border-color:#555; margin: 15px 0;'>",
+                "            <p><span>Totalt bokstäver:</span> <strong id='statTotal'>0</strong></p>",
+                "        </div>",
+                "        <div style='display: flex; gap: 10px;'>",
+                "            <button onclick='resetGame()' class='top-btn' style='background: #28a745; border-color: #1e7e34; padding: 12px 20px; font-size: 14px;'>🔄 Börja om</button>",
+                "            <a href='index.html' class='top-btn' style='padding: 12px 20px; font-size: 14px;'>📋 Fler korsord</a>",
+                "        </div>",
+                "    </div>",
+                "    <div class='game-footer' style='margin-top: 40px; text-align: center; opacity: 0.8;'>",
+                `        <img src='${counterUrl}' alt='Besöksräknare'>`,
+                "    </div>",
+                "    <input type='text' id='mobileInput'>",
+                "    <script>",
+                "        const gData = " + exportData + ";",
+                "        const gridEl = document.getElementById('grid');",
+                "        const acrossListEl = document.getElementById('acrossList');",
+                "        const downListEl = document.getElementById('downList');",
+                "        const mobileInput = document.getElementById('mobileInput');",
+                "        const helpBtn = document.getElementById('helpBtn');",
+                "        let cells = [];",
+                "        let currentSelected = null;",
+                "        let currentDirection = 'across'; // 'across' or 'down'",
+                "        let totalLetters = 0;",
+                "        let revealedCells = new Set();",
+                "        ",
+                "        gridEl.style.gridTemplateColumns = `repeat(${gData.cols}, 1fr)`;",
+                "        ",
+                "        for (let i = 0; i < gData.rows * gData.cols; i++) {",
+                "            const cellData = gData.grid[i];",
+                "            const num = gData.numbering[i];",
+                "            const cell = document.createElement('div');",
+                "            cell.className = 'cell' + (cellData.isBlack ? ' black' : '');",
+                "            cell.dataset.index = i;",
+                "            ",
+                "            if (!cellData.isBlack && cellData.answer && cellData.answer !== '') {",
+                "                totalLetters++;",
+                "            }",
+                "            ",
+                "            if (!cellData.isBlack && num) {",
+                "                const nSpan = document.createElement('span');",
+                "                nSpan.className = 'num';",
+                "                nSpan.innerText = num;",
+                "                cell.appendChild(nSpan);",
+                "            }",
+                "            ",
+                "            if (!cellData.isBlack) {",
+                "                const letterSpan = document.createElement('span');",
+                "                letterSpan.className = 'letter';",
+                "                cell.appendChild(letterSpan);",
+                "                cell.letterSpan = letterSpan;",
+                "                ",
+                "                cell.addEventListener('click', () => selectCell(i));",
+                "            }",
+                "            cells.push(cell);",
+                "            gridEl.appendChild(cell);",
+                "        }",
+                "        ",
+                "        function renderClues(listId, direction, clueObj) {",
+                "            const listEl = document.getElementById(listId);",
+                "            Object.keys(clueObj).sort((a,b)=>a-b).forEach(num => {",
+                "                const div = document.createElement('div');",
+                "                div.className = 'clue-item';",
+                "                div.id = 'clue-' + direction + '-' + num;",
+                "                div.innerHTML = `<strong>${num}</strong> <span>${clueObj[num]}</span>`;",
+                "                div.addEventListener('click', () => selectClue(num, direction));",
+                "                listEl.appendChild(div);",
+                "            });",
+                "        }",
+                "        renderClues('acrossList', 'across', gData.clues.across);",
+                "        renderClues('downList', 'down', gData.clues.down);",
+                "        ",
+                "        function getWordCells(startIndex, direction) {",
+                "            let wordCells = [];",
+                "            let curr = startIndex;",
+                "            if (direction === 'across') {",
+                "                const row = Math.floor(startIndex / gData.cols);",
+                "                while (curr >= row * gData.cols && !gData.grid[curr].isBlack) curr--;",
+                "                curr++;",
+                "                while (curr < (row + 1) * gData.cols && !gData.grid[curr].isBlack) {",
+                "                    wordCells.push(curr); curr++;",
+                "                }",
+                "            } else {",
+                "                while (curr >= 0 && !gData.grid[curr].isBlack) curr -= gData.cols;",
+                "                curr += gData.cols;",
+                "                while (curr < gData.rows * gData.cols && !gData.grid[curr].isBlack) {",
+                "                    wordCells.push(curr); curr += gData.cols;",
+                "                }",
+                "            }",
+                "            return wordCells;",
+                "        }",
+                "        ",
+                "        function selectCell(index) {",
+                "            if (currentSelected === index) {",
+                "                currentDirection = currentDirection === 'across' ? 'down' : 'across';",
+                "            } else {",
+                "                currentSelected = index;",
+                "            }",
+                "            updateHighlights();",
+                "            mobileInput.focus();",
+                "        }",
+                "        ",
+                "        function selectClue(num, direction) {",
+                "            currentDirection = direction;",
+                "            for(let i=0; i<gData.numbering.length; i++) {",
+                "                if(gData.numbering[i] == num && !gData.grid[i].isBlack) {",
+                "                    currentSelected = i;",
+                "                    updateHighlights();",
+                "                    mobileInput.focus();",
+                "                    break;",
+                "                }",
+                "            }",
+                "        }",
+                "        ",
+                "        function updateHighlights() {",
+                "            cells.forEach(c => { c.classList.remove('selected', 'highlighted'); });",
+                "            document.querySelectorAll('.clue-item').forEach(el => el.classList.remove('active'));",
+                "            ",
+                "            if (currentSelected === null) return;",
+                "            ",
+                "            const wCells = getWordCells(currentSelected, currentDirection);",
+                "            if (wCells.length <= 1) {",
+                "                currentDirection = currentDirection === 'across' ? 'down' : 'across';",
+                "                updateHighlights();",
+                "                return;",
+                "            }",
+                "            ",
+                "            wCells.forEach(idx => cells[idx].classList.add('highlighted'));",
+                "            cells[currentSelected].classList.add('selected');",
+                "            ",
+                "            const clueNum = gData.numbering[wCells[0]];",
+                "            const clueEl = document.getElementById('clue-' + currentDirection + '-' + clueNum);",
+                "            if (clueEl) {",
+                "                clueEl.classList.add('active');",
+                "                clueEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });",
+                "            }",
+                "        }",
+                "        ",
+                "        mobileInput.addEventListener('input', (e) => {",
+                "            if (currentSelected === null) return;",
+                "            const val = mobileInput.value.toUpperCase();",
+                "            mobileInput.value = '';",
+                "            if (val.match(/^[A-ZÅÄÖ]$/)) {",
+                "                cells[currentSelected].letterSpan.innerText = val;",
+                "                cells[currentSelected].letterSpan.style.color = '#000';",
+                "                checkWinCondition();",
+                "                let wCells = getWordCells(currentSelected, currentDirection);",
+                "                let pos = wCells.indexOf(currentSelected);",
+                "                if (pos < wCells.length - 1) {",
+                "                    currentSelected = wCells[pos + 1];",
+                "                    updateHighlights();",
+                "                }",
+                "            }",
+                "        });",
+                "        ",
+                "        document.addEventListener('keydown', (e) => {",
+                "            if (currentSelected === null) return;",
+                "            if (e.key === 'Backspace' || e.key === 'Delete') {",
+                "                cells[currentSelected].letterSpan.innerText = '';",
+                "                checkWinCondition();",
+                "                let wCells = getWordCells(currentSelected, currentDirection);",
+                "                let pos = wCells.indexOf(currentSelected);",
+                "                if (pos > 0) {",
+                "                    currentSelected = wCells[pos - 1];",
+                "                    updateHighlights();",
+                "                }",
+                "            } else if (e.key === 'ArrowRight' && currentSelected % gData.cols < gData.cols - 1 && !gData.grid[currentSelected+1].isBlack) {",
+                "                currentDirection = 'across'; selectCell(currentSelected + 1);",
+                "            } else if (e.key === 'ArrowLeft' && currentSelected % gData.cols > 0 && !gData.grid[currentSelected-1].isBlack) {",
+                "                currentDirection = 'across'; selectCell(currentSelected - 1);",
+                "            } else if (e.key === 'ArrowDown' && currentSelected < gData.cols * (gData.rows - 1) && !gData.grid[currentSelected+gData.cols].isBlack) {",
+                "                currentDirection = 'down'; selectCell(currentSelected + gData.cols);",
+                "            } else if (e.key === 'ArrowUp' && currentSelected >= gData.cols && !gData.grid[currentSelected-gData.cols].isBlack) {",
+                "                currentDirection = 'down'; selectCell(currentSelected - gData.cols);",
+                "            }",
+                "        });",
+                "        ",
+                "        helpBtn.addEventListener('click', function() {",
+                "            if (currentSelected === null) {",
+                "                alert('Markera en skrivruta först för att få hjälp!');",
+                "                return;",
+                "            }",
+                "            const d = gData.grid[currentSelected];",
+                "            if (d.answer && d.answer !== '') {",
+                "                cells[currentSelected].letterSpan.innerText = d.answer;",
+                "                cells[currentSelected].letterSpan.style.color = '#007bff';",
+                "                revealedCells.add(currentSelected);",
+                "                checkWinCondition();",
+                "            }",
+                "        });",
+                "        ",
+                "        function checkWinCondition() {",
+                "            let correctCount = 0;",
+                "            let hasAnswers = false;",
+                "            cells.forEach((c, i) => {",
+                "                const d = gData.grid[i];",
+                "                if (!d.isBlack && d.answer && d.answer !== '') {",
+                "                    hasAnswers = true;",
+                "                    if (c.letterSpan && c.letterSpan.innerText === d.answer) {",
+                "                        correctCount++;",
+                "                    }",
+                "                }",
+                "            });",
+                "            ",
+                "            const scoreCounter = document.getElementById('scoreCounter');",
+                "            if (scoreCounter) {",
+                "                scoreCounter.innerText = correctCount + ' / ' + totalLetters + ' rätt';",
+                "            }",
+                "            ",
+                "            if (hasAnswers && correctCount > 0 && correctCount === totalLetters) {",
+                "                document.getElementById('statTotal').innerText = totalLetters;",
+                "                document.getElementById('statCheated').innerText = revealedCells.size;",
+                "                document.getElementById('statOwn').innerText = totalLetters - revealedCells.size;",
+                "                document.getElementById('winOverlay').style.display = 'flex';",
+                "                mobileInput.blur();",
+                "                fireConfetti();",
+                "            }",
+                "        }",
+                "        ",
+                "        function resetGame() {",
+                "            cells.forEach((c, i) => {",
+                "                if (!gData.grid[i].isBlack && c.letterSpan) {",
+                "                    c.letterSpan.innerText = '';",
+                "                    c.letterSpan.style.color = '#000';",
+                "                }",
+                "            });",
+                "            revealedCells.clear();",
+                "            document.getElementById('winOverlay').style.display = 'none';",
+                "            document.querySelectorAll('.confetti').forEach(e => e.remove());",
+                "            checkWinCondition();",
+                "        }",
+                "        ",
+                "        function fireConfetti() {",
+                "            const colors = ['#ffeb3b', '#28a745', '#007bff', '#17a2b8', '#dc3545', '#ff007f'];",
+                "            for (let i = 0; i < 150; i++) {",
+                "                let conf = document.createElement('div');",
+                "                conf.className = 'confetti';",
+                "                conf.style.left = Math.random() * 100 + 'vw';",
+                "                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];",
+                "                conf.style.top = '-10px';",
+                "                document.body.appendChild(conf);",
+                "                ",
+                "                let angle = Math.random() * Math.PI * 2;",
+                "                let velocity = 2 + Math.random() * 4;",
+                "                let x = parseFloat(conf.style.left);",
+                "                let y = -10;",
+                "                let rot = 0;",
+                "                ",
+                "                function fall() {",
+                "                    y += velocity;",
+                "                    x += Math.sin(angle) * 1.5;",
+                "                    rot += velocity * 2;",
+                "                    conf.style.top = y + 'px';",
+                "                    conf.style.left = x + 'px';",
+                "                    conf.style.opacity = y > window.innerHeight - 100 ? (window.innerHeight - y) / 100 : 1;",
+                "                    conf.style.transform = 'rotate(' + rot + 'deg)';",
+                "                    if (y < window.innerHeight) {",
+                "                        requestAnimationFrame(fall);",
+                "                    } else {",
+                "                        conf.remove();",
+                "                    }",
+                "                }",
+                "                setTimeout(() => requestAnimationFrame(fall), Math.random() * 2000);",
+                "            }",
+                "        }",
+                "        ",
+                "        checkWinCondition();",
+                "    <\/script>",
+                "</body>",
+                "</html>"
+            ].join("\n");
+
+            const blob = new Blob([htmlLines], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", url);
+            downloadAnchorNode.setAttribute("download", "mitt_list_korsord.html");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        // Starta upp
+        // initGrid() kallas numera i window.onload
+    </script>
+</body>
+</html>

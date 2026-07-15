@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Min Korsordsbyggare v6.11</title>
+    <title>Min Korsordsbyggare v6.15</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
         
@@ -28,7 +28,6 @@
         
         .cell { border: 1px solid #000; position: relative; background-color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; user-select: none; text-align: center; overflow: hidden; word-wrap: break-word; line-height: 1.1; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; }
         
-        /* NY PIL-POSITIONERING */
         .cell-arrow { position: absolute; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }
         .arrow-tr { top: 2px; right: 2px; }
         .arrow-tl { top: 2px; left: 2px; }
@@ -197,7 +196,6 @@
                 <input type="text" id="cellAnswer" maxlength="1" placeholder="T.ex. A">
                 
                 <label style="margin-top: 10px; font-size: 12px; font-weight: normal;">Liten pil i hörnet (valfritt):</label>
-                <!-- NY RULLGARDIN FÖR PILENS POSITION -->
                 <select id="arrowPosition" style="margin-bottom: 5px; font-size: 12px; padding: 4px;" onchange="updateArrowPosition()">
                     <option value="tr">Uppe till höger</option>
                     <option value="br">Nere till höger</option>
@@ -345,7 +343,7 @@
         const cellImageUrlInput = document.getElementById('cellImageUrl');
         const cellColSpanInput = document.getElementById('cellColSpan');
         const cellRowSpanInput = document.getElementById('cellRowSpan');
-        const arrowPositionSelect = document.getElementById('arrowPosition'); // NY REFERENS FÖR POSITION
+        const arrowPositionSelect = document.getElementById('arrowPosition'); 
         
         const whiteSettings = document.getElementById('whiteSettings');
         const clueSettings = document.getElementById('clueSettings');
@@ -555,7 +553,7 @@
                     cell.dataset.colspan = d.colspan || '1';
                     cell.dataset.rowspan = d.rowspan || '1';
                     cell.dataset.arrow = d.arrow || ''; 
-                    cell.dataset.arrowpos = d.arrowpos || 'tr'; // LÄS IN POSITION
+                    cell.dataset.arrowpos = d.arrowpos || 'tr'; 
                 } else {
                     cell.dataset.type = 'white';
                     cell.dataset.answer = '';
@@ -634,7 +632,7 @@
                 colspan: selectedCell.dataset.colspan,
                 rowspan: selectedCell.dataset.rowspan,
                 arrow: selectedCell.dataset.arrow,
-                arrowpos: selectedCell.dataset.arrowpos // KOPIERA POSITION
+                arrowpos: selectedCell.dataset.arrowpos 
             };
         }
 
@@ -663,7 +661,7 @@
             selectedCell.dataset.colspan = clipboardData.colspan;
             selectedCell.dataset.rowspan = clipboardData.rowspan;
             selectedCell.dataset.arrow = clipboardData.arrow || '';
-            selectedCell.dataset.arrowpos = clipboardData.arrowpos || 'tr'; // KLISTRA IN POSITION
+            selectedCell.dataset.arrowpos = clipboardData.arrowpos || 'tr'; 
             refreshSingleCellUI(selectedCell);
             updatePanelFromSelectedCell();
             renderGridSpans();
@@ -691,7 +689,7 @@
                 }
                 if (cell.dataset.arrow) {
                     const arrowSpan = document.createElement('span');
-                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); // LÄGG TILL KLASS
+                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); 
                     arrowSpan.innerHTML = formatClueText(cell.dataset.arrow);
                     cell.appendChild(arrowSpan);
                 }
@@ -729,14 +727,13 @@
                 
                 if (cell.dataset.arrow) {
                     const arrowSpan = document.createElement('span');
-                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); // LÄGG TILL KLASS
+                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); 
                     arrowSpan.innerHTML = formatClueText(cell.dataset.arrow);
                     cell.appendChild(arrowSpan);
                 }
             }
         }
 
-        // NY FUNKTION FÖR ATT UPPDATERA PILENS POSITION I REALTID
         function updateArrowPosition() {
             if (!selectedCell) return;
             selectedCell.dataset.arrowpos = arrowPositionSelect.value;
@@ -757,7 +754,7 @@
             cellImageUrlInput.value = selectedCell.dataset.imgurl.startsWith('data:image') ? '(Sparad bild)' : selectedCell.dataset.imgurl;
             cellColSpanInput.value = selectedCell.dataset.colspan;
             cellRowSpanInput.value = selectedCell.dataset.rowspan;
-            arrowPositionSelect.value = selectedCell.dataset.arrowpos || 'tr'; // MATCHA RULLGARDIN
+            arrowPositionSelect.value = selectedCell.dataset.arrowpos || 'tr'; 
 
             const type = selectedCell.dataset.type;
             whiteSettings.classList.add('hidden');
@@ -965,7 +962,7 @@
                 colspan: c.dataset.colspan,
                 rowspan: c.dataset.rowspan,
                 arrow: c.dataset.arrow,
-                arrowpos: c.dataset.arrowpos // SPARA POSITIONEN I UTKAST
+                arrowpos: c.dataset.arrowpos 
             }));
         }
 
@@ -1059,6 +1056,9 @@
 
         function exportPlayableGame() {
             const gameTitle = puzzleTitleInput.value || "Korsord";
+            const safeTitle = gameTitle.replace(/[^a-zA-Z0-9åäöÅÄÖ]/g, '');
+            const counterUrl = `https://api.visitorbadge.io/api/visitors?path=PollJohan.korsord.${safeTitle}&label=Bes%C3%B6kare&countColor=%23007bff`;
+            
             const gameAuthor = puzzleAuthorInput.value || "";
             const gameTheme = puzzleThemeInput.value || "";
             
@@ -1079,7 +1079,7 @@
                 "    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>",
                 `    <title>${gameTitle}</title>`,
                 "    <style>",
-                "        body { font-family: Arial, sans-serif; background-color: #222; margin: 0; padding: 0 0 100px 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: white; text-align: center; }",
+                "        body { font-family: Arial, sans-serif; background-color: #222; margin: 0; padding: 0 0 100px 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: white; text-align: center; overflow-x: hidden; }",
                 "        .header-container { text-align: center; margin: 0 auto; padding: 20px; width: 100%; max-width: 600px; box-sizing: border-box; }",
                 "        .header-container h1 { margin: 0; font-size: 24px; text-transform: uppercase; color: #fff; letter-spacing: 1px; border-bottom: 1px solid #555; padding-bottom: 8px; }",
                 "        .header-container p { margin: 8px 0 0 0; font-size: 13px; font-style: italic; color: #aaa; }",
@@ -1089,6 +1089,9 @@
                 "        .top-btn:hover { background: #444; border-color: #777; }",
                 "        .top-btn.print-btn { background: #007bff; border-color: #0056b3; }",
                 "        .top-btn.print-btn:hover { background: #0056b3; }",
+                "        .social-bar { margin-top: 15px; display: flex; justify-content: center; gap: 15px; font-size: 13px; }",
+                "        .social-bar a { color: #ddd; text-decoration: none; font-weight: bold; transition: opacity 0.2s; }",
+                "        .social-bar a:hover { opacity: 0.7; }",
                 "        .floating-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: rgba(20, 20, 20, 0.95); padding: 10px 15px; border-radius: 40px; border: 1px solid #555; display: flex; align-items: center; gap: 15px; z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.6); white-space: nowrap; }",
                 "        #scoreCounter { color: #fff; font-size: 15px; font-weight: bold; margin-left: 5px; }",
                 "        #helpBtn { background-color: #ffc107; color: #000; padding: 8px 18px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }",
@@ -1114,16 +1117,20 @@
                 "        .cell.selected { outline: 3px solid #ff007f; z-index: 10; background-color: #ffe6f0; }",
                 "        .cell.correct { color: #155724; }",
                 "        #mobileInput { position: absolute; opacity: 0; width: 1px; height: 1px; border: none; padding: 0; margin: 0; pointer-events: none; }",
-                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; }",
-                "        #winOverlay h1 { font-size: 50px; margin-bottom: 10px; color: #ffeb3b; }",
-                "        #winOverlay p { font-size: 20px; }",
+                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; padding: 20px; box-sizing: border-box; }",
+                "        #winOverlay h1 { font-size: 45px; margin-bottom: 5px; color: #ffeb3b; }",
+                "        #winOverlay p { font-size: 18px; margin-bottom: 20px; }",
+                "        .stats-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #444; width: 100%; max-width: 300px; text-align: left; }",
+                "        .stats-box p { font-size: 16px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; color: #ddd; }",
+                "        .stats-box strong { color: #fff; font-size: 20px; }",
+                "        .confetti { position: absolute; width: 10px; height: 10px; opacity: 0; z-index: 1999; }",
                 "        @media print {",
                 "            body { background-color: white !important; padding: 0 !important; margin: 0 !important; color: black !important; }",
                 "            .header-container { padding-top: 0 !important; margin-bottom: 30px !important; }",
                 "            .header-container h1 { color: black !important; border-color: #999 !important; }",
                 "            .header-container p { color: #555 !important; }",
                 "            .theme-box { background: transparent !important; color: #000 !important; border: 2px solid #000 !important; box-shadow: none !important; }",
-                "            .floating-bar, .link-bar, #winOverlay, #mobileInput { display: none !important; }",
+                "            .floating-bar, .link-bar, .social-bar, #winOverlay, #mobileInput, .game-footer { display: none !important; }",
                 "            .player-letter { display: none !important; }",
                 "            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }",
                 "            .cell.selected { outline: none !important; }",
@@ -1135,6 +1142,11 @@
                 `        <h1>${gameTitle}</h1>`,
                 `        <p>${gameAuthor}</p>`,
                 `        ${gameTheme ? `<div class='theme-box'>${gameTheme}</div>` : ""}`,
+                "        <div class='social-bar'>",
+                "            <a href='https://www.instagram.com/johan_lindroos/' target='_blank' style='color: #E1306C;'>📷 Instagram</a>",
+                "            <a href='https://www.youtube.com/@JohanTeeVee' target='_blank' style='color: #FF0000;'>📺 YouTube</a>",
+                "            <a href='https://www.tiktok.com/@johan_lindroos' target='_blank' style='color: #fff;'>🎵 TikTok</a>",
+                "        </div>",
                 "        <div class='link-bar'>",
                 "            <a href='index.html' class='top-btn'>← Alla korsord</a>",
                 "            <button onclick='window.print()' class='top-btn print-btn'>🖨️ Skriv ut / PDF</button>",
@@ -1147,10 +1159,22 @@
                 "    <div id='winOverlay'>",
                 "        <h1>🎉 GRATTIS! 🎉</h1>",
                 "        <p>Du har löst hela korsordet!</p>",
-                "        <a href='index.html' class='top-btn' style='margin-top: 20px;'>Gå till menyn</a>",
+                "        <div class='stats-box'>",
+                "            <p><span>Dina egna svar:</span> <strong id='statOwn' style='color:#28a745;'>0</strong></p>",
+                "            <p><span>Tagit hjälp:</span> <strong id='statCheated' style='color:#ffc107;'>0</strong></p>",
+                "            <hr style='border-color:#555; margin: 15px 0;'>",
+                "            <p><span>Totalt bokstäver:</span> <strong id='statTotal'>0</strong></p>",
+                "        </div>",
+                "        <div style='display: flex; gap: 10px;'>",
+                "            <button onclick='resetGame()' class='top-btn' style='background: #28a745; border-color: #1e7e34; padding: 12px 20px; font-size: 14px;'>🔄 Börja om</button>",
+                "            <a href='index.html' class='top-btn' style='padding: 12px 20px; font-size: 14px;'>📋 Fler korsord</a>",
+                "        </div>",
                 "    </div>",
                 "    <input type='text' id='mobileInput' autocomplete='off' spellcheck='false'>",
                 "    <div id='grid' class='grid-container'></div>",
+                "    <div class='game-footer' style='margin-top: 40px; padding-bottom: 20px; text-align: center; opacity: 0.8;'>",
+                `        <img src='${counterUrl}' alt='Besöksräknare'>`,
+                "    </div>",
                 "    <script>",
                 "        const gameData = " + gameData + ";",
                 "        const rows = gameData.rows;",
@@ -1162,6 +1186,7 @@
                 "        let cellsArray = [];",
                 "        let selectedCell = null;",
                 "        let totalLetters = 0;",
+                "        let revealedCells = new Set();",
                 "        ",
                 "        function formatClueText(text) {",
                 "            if (!text) return '';",
@@ -1329,6 +1354,7 @@
                 "            if (selectedCell.dataset.answer && selectedCell.dataset.answer !== '') {",
                 "                selectedCell.letterSpan.innerText = selectedCell.dataset.answer;",
                 "                selectedCell.letterSpan.style.color = '#007bff';",
+                "                revealedCells.add(selectedCell.dataset.index);",
                 "                checkWinCondition();",
                 "            }",
                 "        });",
@@ -1351,8 +1377,59 @@
                 "            }",
                 "            ",
                 "            if (hasAnswers && correctCount > 0 && correctCount === totalLetters) {",
+                "                document.getElementById('statTotal').innerText = totalLetters;",
+                "                document.getElementById('statCheated').innerText = revealedCells.size;",
+                "                document.getElementById('statOwn').innerText = totalLetters - revealedCells.size;",
                 "                document.getElementById('winOverlay').style.display = 'flex';",
                 "                mobileInput.blur();",
+                "                fireConfetti();",
+                "            }",
+                "        }",
+                "        ",
+                "        function resetGame() {",
+                "            cellsArray.forEach(c => {",
+                "                if (c.letterSpan) {",
+                "                    c.letterSpan.innerText = '';",
+                "                    c.letterSpan.style.color = '#000';",
+                "                }",
+                "            });",
+                "            revealedCells.clear();",
+                "            document.getElementById('winOverlay').style.display = 'none';",
+                "            document.querySelectorAll('.confetti').forEach(e => e.remove());",
+                "            checkWinCondition();",
+                "        }",
+                "        ",
+                "        function fireConfetti() {",
+                "            const colors = ['#ffeb3b', '#28a745', '#007bff', '#17a2b8', '#dc3545', '#ff007f'];",
+                "            for (let i = 0; i < 150; i++) {",
+                "                let conf = document.createElement('div');",
+                "                conf.className = 'confetti';",
+                "                conf.style.left = Math.random() * 100 + 'vw';",
+                "                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];",
+                "                conf.style.top = '-10px';",
+                "                document.body.appendChild(conf);",
+                "                ",
+                "                let angle = Math.random() * Math.PI * 2;",
+                "                let velocity = 2 + Math.random() * 4;",
+                "                let x = parseFloat(conf.style.left);",
+                "                let y = -10;",
+                "                let rot = 0;",
+                "                ",
+                "                function fall() {",
+                "                    y += velocity;",
+                "                    x += Math.sin(angle) * 1.5;",
+                "                    rot += velocity * 2;",
+                "                    conf.style.top = y + 'px';",
+                "                    conf.style.left = x + 'px';",
+                "                    conf.style.opacity = y > window.innerHeight - 100 ? (window.innerHeight - y) / 100 : 1;",
+                "                    conf.style.transform = 'rotate(' + rot + 'deg)';",
+                "                    if (y < window.innerHeight) {",
+                "                        requestAnimationFrame(fall);",
+                "                    } else {",
+                "                        conf.remove();",
+                "                    }",
+                "                }",
+                "                setTimeout(() => requestAnimationFrame(fall), Math.random() * 2000);",
                 "            }",
                 "        }",
                 "        ",
