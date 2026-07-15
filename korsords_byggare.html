@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Min Korsordsbyggare v6.19</title>
+    <title>Min Korsordsbyggare v6.20</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
         
@@ -330,6 +330,13 @@
             </label>
             <p id="lastSavedText">Senast sparad: Aldrig</p>
         </div>
+
+        <hr>
+        <label style="margin-top:0; color:#17a2b8;">🔗 Meny-länk (Till index.html)</label>
+        <p style="font-size:10px; color:#666; margin-top:0;">Generera HTML-koden för att lägga till detta spel i din huvudmeny.</p>
+        <input type="text" id="exportFilename" placeholder="Sparat filnamn (t.ex. korsord_3.html)">
+        <button class="btn" style="background:#17a2b8; margin-bottom:5px;" onclick="generateIndexLink()">Skapa & Kopiera länk</button>
+
     </div>
 
     <script>
@@ -1617,6 +1624,20 @@
                 }
             }
         };
+
+        function generateIndexLink() {
+            const filename = document.getElementById('exportFilename').value || 'korsord.html';
+            const title = puzzleTitleInput.value || 'Nytt Korsord';
+            const dateStr = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            
+            const linkCode = `<a href="${filename}" class="game-link">\n    <div>\n        <span style="display:block;">${title}</span>\n        <span style="display:block; font-size:11px; color:#888; font-weight:normal; margin-top:3px;">📅 Publicerad: ${dateStr}</span>\n    </div>\n    <span class="arrow">→</span>\n</a>`;
+            
+            navigator.clipboard.writeText(linkCode).then(() => {
+                alert("Länken är kopierad!\n\nÖppna din 'index.html' och klistra in koden i listan.");
+            }).catch(err => {
+                alert("Kunde inte kopiera. Här är koden:\n\n" + linkCode);
+            });
+        }
     </script>
 
 </body>
