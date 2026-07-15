@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Min Korsordsbyggare v6.5</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
+        
+        .zoom-controls { position: fixed; top: 15px; left: 20px; background: white; padding: 8px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); z-index: 999; display: flex; gap: 8px; align-items: center; font-weight: bold; font-size: 14px; }
+        .zoom-controls button { padding: 5px 12px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; }
+        .zoom-controls button:hover { background: #e9e9e9; }
+
+        .workspace-wrapper { transform-origin: top left; transition: transform 0.2s ease-out; }
+        
+        .puzzle-header { margin-left: 32px; margin-bottom: 15px; color: #333; }
+        .puzzle-header h1 { margin: 0; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+        .puzzle-header p { margin: 2px 0 0 0; font-size: 14px; font-style: italic; color: #666; }
+        .theme-box-preview { margin-top: 10px; background: #e9ecef; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: bold; color: #007bff; display: inline-block; border: 1px solid #b8daff; }
+
+        .workspace { display: grid; grid-template-columns: 30px max-content; grid-template-rows: 30px max-content; }
+        .ruler-x { display: grid; gap: 0; padding-left: 2px; }
+        .ruler-y { display: grid; gap: 0; padding-top: 2px; }
+        .ruler-cell-x { width: 60px; display: flex; align-items: flex-end; justify-content: center; font-size: 11px; color: #666; font-weight: bold; padding-bottom: 3px; }
+        .ruler-cell-y { height: 60px; display: flex; align-items: center; justify-content: flex-end; font-size: 11px; color: #666; font-weight: bold; padding-right: 5px; }
+        
+        .grid-container { display: grid; gap: 0; background-color: transparent; padding: 2px; width: max-content; }
+        
+        .cell { border: 1px solid #000; position: relative; background-color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; user-select: none; text-align: center; overflow: hidden; word-wrap: break-word; line-height: 1.1; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; }
+        
+        .cell-arrow { position: absolute; top: 2px; right: 2px; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }
+
+        .cell.clue { background-color: #ffffff; font-size: 12px; font-weight: normal; } 
+        .cell.gray { background-color: #d8d8d8; } 
+        .cell.black { background-color: #333333; }
+        .cell.image { background-color: #fff; }
+        
+        .cell.hidden-cell { background-color: transparent; border-color: transparent; }
+        .cell.hidden-cell:hover { background-color: rgba(0,0,0,0.05); border: 1px dashed #ccc; z-index: 9; }
+
+        .cell.split-diag { background: linear-gradient(to bottom right, #eeeeee 48%, #333 49%, #333 51%, #ffffff 52%); }
+        .cell.split-horiz-top { background: linear-gradient(to bottom, #eeeeee 48%, #333 49%, #333 51%, #ffffff 52%); }
+        .cell.split-horiz-bottom { background: linear-gradient(to bottom, #ffffff 48%, #333 49%, #333 51%, #eeeeee 52%); }
+        
+        .cell.split-diag .split-clue { position: absolute; top: 2px; left: 2px; width: 65%; text-align: left; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }
+        .cell.split-horiz-top .split-clue { position: absolute; top: 2px; left: 2px; width: 56px; text-align: center; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }
+        .cell.split-horiz-bottom .split-clue { position: absolute; bottom: 2px; left: 2px; width: 56px; text-align: center; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }
+        
+        .cell.split-diag .split-answer { position: absolute; bottom: 1px; right: 4px; font-size: 18px; font-weight: bold; color: #000; }
+        .cell.split-horiz-top .split-answer { position: absolute; bottom: 1px; left: 0; width: 100%; text-align: center; font-size: 18px; font-weight: bold; color: #000; }
+        .cell.split-horiz-bottom .split-answer { position: absolute; top: 1px; left: 0; width: 100%; text-align: center; font-size: 18px; font-weight: bold; color: #000; }
+
+        .cell.selected { outline: 4px solid #007bff; z-index: 10; }
+        
+        .panel { background: white; padding: 0 20px 20px 20px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 340px; max-height: 85vh; overflow-y: auto; position: fixed; top: 20px; right: 20px; z-index: 1000; border: 1px solid #ccc; }
+        
+        .panel-header { background: #007bff; color: white; margin: 0 -20px 15px -20px; padding: 12px 20px; font-size: 16px; font-weight: bold; cursor: grab; display: flex; justify-content: space-between; align-items: center; user-select: none; position: sticky; top: 0; z-index: 10; }
+        .panel-header:active { cursor: grabbing; }
+
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; margin-top: 15px; }
+        select, input, textarea { width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: Arial, sans-serif; }
+        .row-col-inputs { display: flex; gap: 10px; }
+        .hidden { display: none !important; }
+        
+        .type-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; }
+        .type-btn { flex: 1 1 30%; padding: 8px 1px; font-size: 10px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; text-align: center; }
+        .type-btn:hover { background: #e9e9e9; }
+        .type-btn.active { background-color: #007bff; color: white; border-color: #0056b3; font-weight: bold; }
+
+        .clipboard-btns { display: flex; gap: 5px; margin-bottom: 15px; background: #f0f8ff; padding: 5px; border-radius: 4px; border: 1px solid #cce5ff;}
+        .clipboard-btns button { flex: 1; padding: 5px; font-size: 11px; cursor: pointer; border: 1px solid #b8daff; border-radius: 4px; background: white; color: #0056b3; font-weight: bold; }
+        .clipboard-btns button:hover { background: #e2eef9; }
+
+        .arrow-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; margin-bottom: 10px; }
+        .arrow-buttons button { flex: 1 1 15%; padding: 5px 0; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; }
+        .arrow-buttons button:hover { background: #e9e9e9; }
+        .arrow-buttons button.clear-arrow { color: #dc3545; font-size: 11px; font-weight: bold; flex: 1 1 100%; margin-top: 2px;}
+        
+        .drop-zone { border: 2px dashed #007bff; border-radius: 6px; padding: 15px; text-align: center; background-color: #e9f5ff; color: #333; font-size: 12px; margin-top: 10px; cursor: pointer; }
+        
+        .save-load-btns, .resize-btns { display: flex; gap: 5px; margin-top: 5px; }
+        .btn { flex: 1; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; font-size: 11px;}
+        .btn-save { background-color: #28a745; }
+        .btn-load { background-color: #17a2b8; }
+        .btn-export { background-color: #ffc107; color: #000; font-size: 12px; margin-top: 10px; padding: 10px;}
+        .btn-export:hover { background-color: #e0a800; }
+        .btn-resize { background-color: #6c757d; }
+        .btn-resize:hover { background-color: #5a6268; }
+        
+        .autosave-section { margin-top: 20px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #ddd; }
+        .autosave-section label { margin-top: 0; font-weight: normal; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        #lastSavedText { font-size: 11px; color: #666; margin-top: 8px; margin-bottom: 0; font-style: italic; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
+
+        @media print {
+            body { background-color: white !important; padding: 0 !important; margin: 0 !important; }
+            .panel, .zoom-controls, .autosave-section { display: none !important; }
+            .workspace-wrapper { transform: none !important; margin: 0 !important; }
+            .workspace { display: block !important; }
+            .ruler-x, .ruler-y, .workspace > div:first-child { display: none !important; }
+            .puzzle-header { margin-left: 0 !important; text-align: center; margin-bottom: 30px !important; margin-top: 20px !important; }
+            .grid-container { margin: 0 auto !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .cell.selected { outline: none !important; }
+            body.print-empty .answer-text, body.print-empty .split-answer { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="zoom-controls">
+        <span>🔍 Zoom:</span>
+        <button onclick="changeZoom(-0.1)">-</button>
+        <span id="zoomLevelText">100%</span>
+        <button onclick="changeZoom(0.1)">+</button>
+    </div>
+
+    <div class="workspace-wrapper" id="workspaceWrapper">
+        <div class="puzzle-header">
+            <h1 id="displayTitle">Korsord 1/26</h1>
+            <p id="displayAuthor">gjort av Pöll-Johan Lindroos / Habla Games</p>
+            <div id="displayTheme" class="theme-box-preview" style="display: inline-block;">Fråga: Vilket är talesättet?</div>
+        </div>
+        
+        <div class="workspace">
+            <div></div>
+            <div id="colRuler" class="ruler-x"></div>
+            <div id="rowRuler" class="ruler-y"></div>
+            <div id="grid" class="grid-container"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="panel">
+        <div class="panel-header" id="panelHeader">
+            <span>🛠 Verktyg</span>
+            <span style="font-size: 11px; font-weight: normal; opacity: 0.8;">(Dra mig)</span>
+        </div>
+        
+        <label style="margin-top:0;">Korsordsinfo</label>
+        <input type="text" id="puzzleTitle" placeholder="Titel (t.ex. Korsord 1/26)" value="Korsord 1/26">
+        <input type="text" id="puzzleAuthor" placeholder="Skapare" value="gjort av Pöll-Johan Lindroos / Habla Games">
+        <input type="text" id="puzzleTheme" placeholder="Tema/Fråga för grå rutor (frivilligt)" value="Vilket är talesättet?">
+
+        <hr>
+
+        <div id="editor" class="hidden">
+            <div class="clipboard-btns">
+                <button type="button" onclick="copyCell()">Kopiera</button>
+                <button type="button" onclick="cutCell()">Klipp ut</button>
+                <button type="button" onclick="pasteCell()">Klistra in</button>
+            </div>
+
+            <label>Typ av ruta:</label>
+            <div class="type-buttons">
+                <button type="button" data-type="white" class="type-btn active">Vit (Bokst.)</button>
+                <button type="button" data-type="gray" class="type-btn">Grå (Bokst.)</button>
+                <button type="button" data-type="clue" class="type-btn">Vit (Ledtråd)</button>
+                
+                <button type="button" data-type="split-diag" class="type-btn" style="background:#e8f4ff; border-color:#007bff;">Delad (Diag)</button>
+                <button type="button" data-type="split-horiz-top" class="type-btn" style="background:#e8f4ff; border-color:#007bff;">Delad (Uppe)</button>
+                <button type="button" data-type="split-horiz-bottom" class="type-btn" style="background:#e8f4ff; border-color:#007bff;">Delad (Nere)</button>
+                
+                <button type="button" data-type="image" class="type-btn">Bildruta</button>
+                <button type="button" data-type="black" class="type-btn">Svart (Tom)</button>
+                <button type="button" data-type="hidden-cell" class="type-btn" style="background:#fce4e4; border-color:#dc3545; color: #dc3545;">Dold (Ramfri)</button>
+            </div>
+
+            <div id="whiteSettings">
+                <label>Rätt bokstav (Facit):</label>
+                <input type="text" id="cellAnswer" maxlength="1" placeholder="T.ex. A">
+                
+                <label style="margin-top: 10px; font-size: 12px; font-weight: normal;">Liten pil i hörnet (valfritt):</label>
+                <div class="arrow-buttons">
+                    <button type="button" onclick="setCellCornerArrow('→')">→</button>
+                    <button type="button" onclick="setCellCornerArrow('↘')">↘</button>
+                    <button type="button" onclick="setCellCornerArrow('↓')">↓</button>
+                    <button type="button" onclick="setCellCornerArrow('↙')">↙</button>
+                    <button type="button" onclick="setCellCornerArrow('←')">←</button>
+                    
+                    <button type="button" onclick="setCellCornerArrow('↖')">↖</button>
+                    <button type="button" onclick="setCellCornerArrow('↑')">↑</button>
+                    <button type="button" onclick="setCellCornerArrow('↗')">↗</button>
+                    <button type="button" onclick="setCellCornerArrow('⤴')">⤴</button>
+                    <button type="button" onclick="setCellCornerArrow('⤵')">⤵</button>
+
+                    <button type="button" onclick="setCellCornerArrow('↳')">↳</button>
+                    <button type="button" onclick="setCellCornerArrow('↲')">↲</button>
+                    <button type="button" onclick="setCellCornerArrow('↱')">↱</button>
+                    <button type="button" onclick="setCellCornerArrow('↰')">↰</button>
+                    <button type="button" onclick="setCellCornerArrow('↴')">↴</button>
+                    
+                    <button type="button" onclick="setCellCornerArrow('↵')">↵</button>
+                    <button type="button" onclick="setCellCornerArrow('⤶')">⤶</button>
+                    <button type="button" onclick="setCellCornerArrow('⤷')">⤷</button>
+
+                    <button type="button" onclick="setCellCornerArrow('')" class="clear-arrow">❌ Ta bort pil</button>
+                </div>
+            </div>
+
+            <div id="clueSettings" class="hidden">
+                <label>Ledtrådstext / Pil:</label>
+                <textarea id="cellClueText" rows="3" placeholder="T.ex. BIL FRÅN ÖST"></textarea>
+                
+                <div class="arrow-buttons">
+                    <button type="button" onclick="insertClueArrow('→')">→</button>
+                    <button type="button" onclick="insertClueArrow('↘')">↘</button>
+                    <button type="button" onclick="insertClueArrow('↓')">↓</button>
+                    <button type="button" onclick="insertClueArrow('↙')">↙</button>
+                    <button type="button" onclick="insertClueArrow('←')">←</button>
+                    
+                    <button type="button" onclick="insertClueArrow('↖')">↖</button>
+                    <button type="button" onclick="insertClueArrow('↑')">↑</button>
+                    <button type="button" onclick="insertClueArrow('↗')">↗</button>
+                    <button type="button" onclick="insertClueArrow('⤴')">⤴</button>
+                    <button type="button" onclick="insertClueArrow('⤵')">⤵</button>
+
+                    <button type="button" onclick="insertClueArrow('↳')">↳</button>
+                    <button type="button" onclick="insertClueArrow('↲')">↲</button>
+                    <button type="button" onclick="insertClueArrow('↱')">↱</button>
+                    <button type="button" onclick="insertClueArrow('↰')">↰</button>
+                    <button type="button" onclick="insertClueArrow('↴')">↴</button>
+                    
+                    <button type="button" onclick="insertClueArrow('↵')">↵</button>
+                    <button type="button" onclick="insertClueArrow('⤶')">⤶</button>
+                    <button type="button" onclick="insertClueArrow('⤷')">⤷</button>
+                </div>
+            </div>
+
+            <div id="imageSettings" class="hidden">
+                <label>Lägg in bild:</label>
+                <input type="text" id="cellImageUrl" placeholder="(Länk, eller ladda upp nedan)">
+                <div id="dropZone" class="drop-zone">
+                    Klicka här, dra en fil hit,<br>eller tryck <b>Cmd+V</b> för att klistra in!
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <div id="sizeSettings" class="hidden">
+                <label>Storlek (Slå ihop rutor):</label>
+                <div class="row-col-inputs">
+                    <div>
+                        <span style="font-size: 12px;">Bredd</span>
+                        <input type="number" id="cellColSpan" min="1" max="10" value="1">
+                    </div>
+                    <div>
+                        <span style="font-size: 12px;">Höjd</span>
+                        <input type="number" id="cellRowSpan" min="1" max="10" value="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <label style="margin-top:0;">Knuffa hela rutnätet (<span id="gridSizeText">22x24</span>)</label>
+        
+        <div class="resize-btns">
+            <button class="btn btn-resize" onclick="resizeGrid(1,0,0,0)">+ Rad Uppe</button>
+            <button class="btn btn-resize" onclick="resizeGrid(-1,0,0,0)">- Rad Uppe</button>
+            <button class="btn btn-resize" onclick="resizeGrid(0,1,0,0)">+ Rad Nere</button>
+            <button class="btn btn-resize" onclick="resizeGrid(0,-1,0,0)">- Rad Nere</button>
+        </div>
+        <div class="resize-btns">
+            <button class="btn btn-resize" onclick="resizeGrid(0,0,1,0)">+ Kol Vänster</button>
+            <button class="btn btn-resize" onclick="resizeGrid(0,0,-1,0)">- Kol Vänster</button>
+            <button class="btn btn-resize" onclick="resizeGrid(0,0,0,1)">+ Kol Höger</button>
+            <button class="btn btn-resize" onclick="resizeGrid(0,0,0,-1)">- Kol Höger</button>
+        </div>
+
+        <hr>
+
+        <label style="margin-top:0;">Filsystem (Utkast)</label>
+        <div class="save-load-btns">
+            <button class="btn btn-save" onclick="downloadDraftFile()">Spara fil (Utkast)</button>
+            <button class="btn btn-load" onclick="document.getElementById('loadInput').click()">Ladda fil</button>
+            <input type="file" id="loadInput" accept=".json" style="display: none;" onchange="loadDraftFromFile(event)">
+        </div>
+        
+        <hr style="margin: 15px 0;">
+        <label style="margin-top:0;">Publicera & Skriv ut (Fusk)</label>
+        
+        <button class="btn btn-export" onclick="exportPlayableGame()" style="width: 100%;">Exportera Spel (HTML) 🚀</button>
+        
+        <div style="display: flex; gap: 5px; margin-top: 5px;">
+            <button class="btn" style="background:#6f42c1; color:white; padding:8px; font-weight:bold; width:100%; border-radius:4px; border:none; cursor:pointer;" onclick="printPuzzle(true)">Skriv ut (Tomt)</button>
+            <button class="btn" style="background:#17a2b8; color:white; padding:8px; font-weight:bold; width:100%; border-radius:4px; border:none; cursor:pointer;" onclick="printPuzzle(false)">Skriv ut (Facit)</button>
+        </div>
+
+        <div class="autosave-section">
+            <label>
+                <input type="checkbox" id="autoSaveToggle" checked> 
+                Autospara i bakgrunden
+            </label>
+            <p id="lastSavedText">Senast sparad: Aldrig</p>
+        </div>
+    </div>
+
+    <script>
+        const gridElement = document.getElementById('grid');
+        const colRulerElement = document.getElementById('colRuler');
+        const rowRulerElement = document.getElementById('rowRuler');
+        const editor = document.getElementById('editor');
+        
+        const cellAnswerInput = document.getElementById('cellAnswer');
+        const cellClueTextInput = document.getElementById('cellClueText');
+        const cellImageUrlInput = document.getElementById('cellImageUrl');
+        const cellColSpanInput = document.getElementById('cellColSpan');
+        const cellRowSpanInput = document.getElementById('cellRowSpan');
+        
+        const whiteSettings = document.getElementById('whiteSettings');
+        const clueSettings = document.getElementById('clueSettings');
+        const imageSettings = document.getElementById('imageSettings');
+        const sizeSettings = document.getElementById('sizeSettings');
+
+        const puzzleTitleInput = document.getElementById('puzzleTitle');
+        const puzzleAuthorInput = document.getElementById('puzzleAuthor');
+        const puzzleThemeInput = document.getElementById('puzzleTheme');
+        
+        const displayTitle = document.getElementById('displayTitle');
+        const displayAuthor = document.getElementById('displayAuthor');
+        const displayTheme = document.getElementById('displayTheme');
+
+        const typeButtons = document.querySelectorAll('.type-btn');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const lastSavedText = document.getElementById('lastSavedText');
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const gridSizeText = document.getElementById('gridSizeText');
+        
+        let rows = 24;
+        let cols = 22;
+        let selectedCell = null;
+        let cellsArray = [];
+        let clipboardData = null;
+
+        let currentZoom = 1.0;
+        const workspaceWrapper = document.getElementById('workspaceWrapper');
+        const zoomLevelText = document.getElementById('zoomLevelText');
+
+        puzzleTitleInput.addEventListener('input', function() {
+            displayTitle.innerText = this.value;
+        });
+        puzzleAuthorInput.addEventListener('input', function() {
+            displayAuthor.innerText = this.value;
+        });
+        puzzleThemeInput.addEventListener('input', function() {
+            if(this.value.trim() !== '') {
+                displayTheme.style.display = 'inline-block';
+                displayTheme.innerText = "Fråga: " + this.value;
+            } else {
+                displayTheme.style.display = 'none';
+            }
+        });
+
+        function changeZoom(amount) {
+            currentZoom += amount;
+            if (currentZoom < 0.3) currentZoom = 0.3;
+            if (currentZoom > 2.0) currentZoom = 2.0;
+            workspaceWrapper.style.transform = `scale(${currentZoom})`;
+            zoomLevelText.innerText = Math.round(currentZoom * 100) + '%';
+        }
+
+        const panel = document.getElementById('panel');
+        const panelHeader = document.getElementById('panelHeader');
+        
+        let isDraggingPanel = false;
+        let dragStartX, dragStartY, panelInitialX, panelInitialY;
+
+        panelHeader.addEventListener('mousedown', function(e) {
+            isDraggingPanel = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            const rect = panel.getBoundingClientRect();
+            panelInitialX = rect.left;
+            panelInitialY = rect.top;
+            panel.style.right = 'auto'; 
+            panel.style.left = panelInitialX + 'px';
+            panel.style.top = panelInitialY + 'px';
+            document.addEventListener('mousemove', onPanelDrag);
+            document.addEventListener('mouseup', stopPanelDrag);
+        });
+
+        function onPanelDrag(e) {
+            if (!isDraggingPanel) return;
+            panel.style.left = (panelInitialX + (e.clientX - dragStartX)) + 'px';
+            panel.style.top = (panelInitialY + (e.clientY - dragStartY)) + 'px';
+        }
+
+        function stopPanelDrag() {
+            isDraggingPanel = false;
+            document.removeEventListener('mousemove', onPanelDrag);
+            document.removeEventListener('mouseup', stopPanelDrag);
+        }
+
+        function adjustFontSize(cell, text) {
+            const len = text.length;
+            if (len <= 8) cell.style.fontSize = "12px";
+            else if (len <= 15) cell.style.fontSize = "10px";
+            else if (len <= 25) cell.style.fontSize = "9px";
+            else cell.style.fontSize = "8px";
+        }
+
+        function renderGridSpans() {
+            cellsArray.forEach(c => {
+                c.style.display = 'flex';
+                c.style.gridColumn = 'span 1';
+                c.style.gridRow = 'span 1';
+            });
+
+            cellsArray.forEach((c, index) => {
+                const cSpan = parseInt(c.dataset.colspan) || 1;
+                const rSpan = parseInt(c.dataset.rowspan) || 1;
+
+                if (cSpan > 1 || rSpan > 1) {
+                    c.style.gridColumn = `span ${cSpan}`;
+                    c.style.gridRow = `span ${rSpan}`;
+                    
+                    const startRow = Math.floor(index / cols);
+                    const startCol = index % cols;
+
+                    for (let r = 0; r < rSpan; r++) {
+                        for (let col_idx = 0; col_idx < cSpan; col_idx++) {
+                            if (r === 0 && col_idx === 0) continue; 
+                            const targetRow = startRow + r;
+                            const targetCol = startCol + col_idx;
+                            if (targetRow < rows && targetCol < cols) {
+                                cellsArray[targetRow * cols + targetCol].style.display = 'none';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function buildRulers() {
+            colRulerElement.innerHTML = '';
+            rowRulerElement.innerHTML = '';
+            colRulerElement.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
+            rowRulerElement.style.gridAutoRows = `60px`;
+
+            for (let c = 1; c <= cols; c++) {
+                const div = document.createElement('div');
+                div.className = 'ruler-cell-x';
+                div.innerText = c;
+                colRulerElement.appendChild(div);
+            }
+            for (let r = 1; r <= rows; r++) {
+                const div = document.createElement('div');
+                div.className = 'ruler-cell-y';
+                div.innerText = r;
+                rowRulerElement.appendChild(div);
+            }
+        }
+
+        function buildGrid(initData = null) {
+            gridElement.innerHTML = '';
+            cellsArray = [];
+            gridElement.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
+            gridElement.style.gridAutoRows = `60px`;
+            gridSizeText.innerText = `${cols}x${rows}`;
+            
+            buildRulers();
+
+            for (let i = 0; i < rows * cols; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                
+                if (initData && initData[i]) {
+                    const d = initData[i];
+                    let cellType = d.type;
+                    if (cellType === 'split') cellType = 'split-diag';
+                    if (cellType === 'split-horiz') cellType = 'split-horiz-top';
+                    
+                    cell.dataset.type = cellType;
+                    cell.dataset.answer = d.answer || '';
+                    cell.dataset.clue = d.clue || '';
+                    cell.dataset.imgurl = d.imgurl || '';
+                    cell.dataset.colspan = d.colspan || '1';
+                    cell.dataset.rowspan = d.rowspan || '1';
+                    cell.dataset.arrow = d.arrow || ''; 
+                } else {
+                    cell.dataset.type = 'hidden-cell';
+                    cell.dataset.answer = '';
+                    cell.dataset.clue = '';
+                    cell.dataset.imgurl = '';
+                    cell.dataset.colspan = '1';
+                    cell.dataset.rowspan = '1';
+                    cell.dataset.arrow = '';
+                }
+
+                refreshSingleCellUI(cell);
+                cellsArray.push(cell);
+
+                cell.addEventListener('click', function() {
+                    if (selectedCell) selectedCell.classList.remove('selected');
+                    selectedCell = this;
+                    selectedCell.classList.add('selected');
+                    editor.classList.remove('hidden');
+                    updatePanelFromSelectedCell();
+                });
+                gridElement.appendChild(cell);
+            }
+            renderGridSpans();
+        }
+
+        buildGrid();
+
+        function resizeGrid(addTop, addBottom, addLeft, addRight) {
+            const newRows = rows + addTop + addBottom;
+            const newCols = cols + addLeft + addRight;
+            if (newRows < 1 || newCols < 1) return;
+
+            const currentData = getGridData();
+            const newData = [];
+
+            for (let r = 0; r < newRows; r++) {
+                for (let c = 0; c < newCols; c++) {
+                    const oldR = r - addTop;
+                    const oldC = c - addLeft;
+
+                    if (oldR >= 0 && oldR < rows && oldC >= 0 && oldC < cols) {
+                        newData.push(currentData[oldR * cols + oldC]);
+                    } else {
+                        newData.push({ type: 'hidden-cell', answer: '', clue: '', imgurl: '', colspan: '1', rowspan: '1', arrow: '' });
+                    }
+                }
+            }
+
+            rows = newRows;
+            cols = newCols;
+            if(selectedCell) selectedCell.classList.remove('selected');
+            selectedCell = null;
+            editor.classList.add('hidden');
+            
+            buildGrid(newData);
+            autoSaveToBrowser();
+        }
+
+        function copyCell() {
+            if(!selectedCell) return;
+            clipboardData = {
+                type: selectedCell.dataset.type,
+                answer: selectedCell.dataset.answer,
+                clue: selectedCell.dataset.clue,
+                imgurl: selectedCell.dataset.imgurl,
+                colspan: selectedCell.dataset.colspan,
+                rowspan: selectedCell.dataset.rowspan,
+                arrow: selectedCell.dataset.arrow
+            };
+        }
+
+        function cutCell() {
+            if(!selectedCell) return;
+            copyCell();
+            selectedCell.dataset.type = 'hidden-cell'; 
+            selectedCell.dataset.answer = '';
+            selectedCell.dataset.clue = '';
+            selectedCell.dataset.imgurl = '';
+            selectedCell.dataset.colspan = '1';
+            selectedCell.dataset.rowspan = '1';
+            selectedCell.dataset.arrow = '';
+            refreshSingleCellUI(selectedCell);
+            updatePanelFromSelectedCell();
+            renderGridSpans();
+        }
+
+        function pasteCell() {
+            if(!selectedCell || !clipboardData) return;
+            selectedCell.dataset.type = clipboardData.type;
+            selectedCell.dataset.answer = clipboardData.answer;
+            selectedCell.dataset.clue = clipboardData.clue;
+            selectedCell.dataset.imgurl = clipboardData.imgurl;
+            selectedCell.dataset.colspan = clipboardData.colspan;
+            selectedCell.dataset.rowspan = clipboardData.rowspan;
+            selectedCell.dataset.arrow = clipboardData.arrow || '';
+            refreshSingleCellUI(selectedCell);
+            updatePanelFromSelectedCell();
+            renderGridSpans();
+        }
+
+        function refreshSingleCellUI(cell) {
+            cell.className = 'cell ' + (cell.dataset.type === 'white' ? '' : cell.dataset.type);
+            
+            if (cell.dataset.type === 'image' && cell.dataset.imgurl) {
+                cell.style.backgroundImage = `url('${cell.dataset.imgurl}')`;
+            } else {
+                cell.style.backgroundImage = ''; 
+            }
+
+            cell.innerHTML = ''; 
+            if(selectedCell === cell) cell.classList.add('selected');
+
+            if (cell.dataset.type === 'white' || cell.dataset.type === 'gray') {
+                cell.style.fontSize = "24px";
+                if (cell.dataset.answer) {
+                    const span = document.createElement('span');
+                    span.className = 'answer-text'; 
+                    span.innerText = cell.dataset.answer;
+                    cell.appendChild(span);
+                }
+                if (cell.dataset.arrow) {
+                    const arrowSpan = document.createElement('span');
+                    arrowSpan.className = 'cell-arrow';
+                    arrowSpan.innerText = cell.dataset.arrow;
+                    cell.appendChild(arrowSpan);
+                }
+
+            } else if (cell.dataset.type === 'clue') {
+                cell.innerText = cell.dataset.clue;
+                adjustFontSize(cell, cell.dataset.clue);
+                
+            } else if (['split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(cell.dataset.type)) {
+                
+                if (cell.dataset.clue) {
+                    const clueSpan = document.createElement('div');
+                    clueSpan.className = 'split-clue';
+                    clueSpan.innerText = cell.dataset.clue;
+                    
+                    const len = cell.dataset.clue.length;
+                    if (cell.dataset.type === 'split-horiz-top' || cell.dataset.type === 'split-horiz-bottom') {
+                        if (len > 25) clueSpan.style.fontSize = "6px";
+                        else if (len > 15) clueSpan.style.fontSize = "7px";
+                        else clueSpan.style.fontSize = "8px";
+                    } else { 
+                        if (len > 18) clueSpan.style.fontSize = "6px";
+                        else if (len > 10) clueSpan.style.fontSize = "7px";
+                        else clueSpan.style.fontSize = "8px";
+                    }
+                    cell.appendChild(clueSpan);
+                }
+                
+                if (cell.dataset.answer) {
+                    const ansSpan = document.createElement('div');
+                    ansSpan.className = 'split-answer';
+                    ansSpan.innerText = cell.dataset.answer;
+                    cell.appendChild(ansSpan);
+                }
+                
+                if (cell.dataset.arrow) {
+                    const arrowSpan = document.createElement('span');
+                    arrowSpan.className = 'cell-arrow';
+                    arrowSpan.innerText = cell.dataset.arrow;
+                    cell.appendChild(arrowSpan);
+                }
+            }
+        }
+
+        function updatePanelFromSelectedCell() {
+            if(!selectedCell) return;
+            
+            typeButtons.forEach(b => b.classList.remove('active'));
+            const activeBtn = document.querySelector(`.type-btn[data-type="${selectedCell.dataset.type}"]`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            cellAnswerInput.value = selectedCell.dataset.answer;
+            cellClueTextInput.value = selectedCell.dataset.clue;
+            cellImageUrlInput.value = selectedCell.dataset.imgurl.startsWith('data:image') ? '(Sparad bild)' : selectedCell.dataset.imgurl;
+            cellColSpanInput.value = selectedCell.dataset.colspan;
+            cellRowSpanInput.value = selectedCell.dataset.rowspan;
+
+            const type = selectedCell.dataset.type;
+            whiteSettings.classList.add('hidden');
+            clueSettings.classList.add('hidden');
+            imageSettings.classList.add('hidden');
+            sizeSettings.classList.add('hidden');
+
+            if (type === 'white' || type === 'gray') {
+                whiteSettings.classList.remove('hidden');
+                if (document.activeElement !== cellAnswerInput) {
+                    cellAnswerInput.focus();
+                    cellAnswerInput.select();
+                }
+            }
+            if (type === 'clue') { 
+                clueSettings.classList.remove('hidden'); 
+                sizeSettings.classList.remove('hidden'); 
+            }
+            if (['split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(type)) {
+                whiteSettings.classList.remove('hidden');
+                clueSettings.classList.remove('hidden');
+                if (document.activeElement !== cellAnswerInput && document.activeElement !== cellClueTextInput) {
+                    cellAnswerInput.focus();
+                    cellAnswerInput.select();
+                }
+            }
+            if (type === 'image') { 
+                imageSettings.classList.remove('hidden'); 
+                sizeSettings.classList.remove('hidden'); 
+            }
+        }
+
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!selectedCell) return;
+                selectedCell.dataset.type = this.dataset.type;
+                selectedCell.dataset.colspan = '1';
+                selectedCell.dataset.rowspan = '1';
+                refreshSingleCellUI(selectedCell);
+                renderGridSpans();
+                updatePanelFromSelectedCell();
+            });
+        });
+
+        cellAnswerInput.addEventListener('input', function() {
+            if (!selectedCell) return;
+            selectedCell.dataset.answer = this.value.toUpperCase();
+            if (['white', 'gray', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(selectedCell.dataset.type)) {
+                refreshSingleCellUI(selectedCell); 
+            }
+        });
+
+        function setCellCornerArrow(arrow) {
+            if (!selectedCell || !['white', 'gray', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(selectedCell.dataset.type)) return;
+            selectedCell.dataset.arrow = arrow;
+            refreshSingleCellUI(selectedCell);
+        }
+
+        cellClueTextInput.addEventListener('input', function() {
+            if (!selectedCell) return;
+            const upperVal = this.value.toUpperCase(); 
+            this.value = upperVal; 
+            selectedCell.dataset.clue = upperVal;
+            if (['clue', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(selectedCell.dataset.type)) {
+                refreshSingleCellUI(selectedCell);
+            }
+        });
+
+        function insertClueArrow(arrow) {
+            if (!selectedCell || !['clue', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(selectedCell.dataset.type)) return;
+            let currentVal = cellClueTextInput.value;
+            let newVal = currentVal.length > 0 ? currentVal + " " + arrow : arrow;
+            const upperNewVal = newVal.toUpperCase();
+            cellClueTextInput.value = upperNewVal;
+            selectedCell.dataset.clue = upperNewVal;
+            refreshSingleCellUI(selectedCell);
+            cellClueTextInput.focus();
+        }
+
+        cellImageUrlInput.addEventListener('input', function() {
+            if (!selectedCell) return;
+            selectedCell.dataset.imgurl = this.value;
+            if (selectedCell.dataset.type === 'image') refreshSingleCellUI(selectedCell);
+        });
+
+        function updateSpan() {
+            if (!selectedCell) return;
+            selectedCell.dataset.colspan = cellColSpanInput.value || 1;
+            selectedCell.dataset.rowspan = cellRowSpanInput.value || 1;
+            renderGridSpans();
+        }
+        cellColSpanInput.addEventListener('change', updateSpan);
+        cellRowSpanInput.addEventListener('change', updateSpan);
+
+        document.addEventListener('keydown', function(e) {
+            const isTextarea = document.activeElement.tagName === 'TEXTAREA';
+            const isInput = document.activeElement.tagName === 'INPUT';
+            const activeId = document.activeElement.id;
+
+            if (isTextarea || (isInput && activeId !== 'cellAnswer' && activeId !== 'puzzleTitle' && activeId !== 'puzzleAuthor' && activeId !== 'puzzleTheme')) return; 
+            if (!selectedCell) return;
+
+            if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+                let currentIndex = parseInt(selectedCell.dataset.index);
+                let currentRow = Math.floor(currentIndex / cols);
+                let currentCol = currentIndex % cols;
+                let newIndex = -1;
+
+                if (e.key === 'ArrowRight') {
+                    newIndex = currentIndex + 1;
+                    while (newIndex < (currentRow + 1) * cols && (cellsArray[newIndex].style.display === 'none' || cellsArray[newIndex].dataset.type === 'hidden-cell')) newIndex++;
+                    if (newIndex >= (currentRow + 1) * cols) newIndex = -1;
+                } else if (e.key === 'ArrowLeft') {
+                    newIndex = currentIndex - 1;
+                    while (newIndex >= currentRow * cols && (cellsArray[newIndex].style.display === 'none' || cellsArray[newIndex].dataset.type === 'hidden-cell')) newIndex--;
+                    if (newIndex < currentRow * cols) newIndex = -1;
+                } else if (e.key === 'ArrowDown') {
+                    newIndex = currentIndex + cols;
+                    while (newIndex < rows * cols && (cellsArray[newIndex].style.display === 'none' || cellsArray[newIndex].dataset.type === 'hidden-cell')) newIndex += cols;
+                    if (newIndex >= rows * cols) newIndex = -1;
+                } else if (e.key === 'ArrowUp') {
+                    newIndex = currentIndex - cols;
+                    while (newIndex >= 0 && (cellsArray[newIndex].style.display === 'none' || cellsArray[newIndex].dataset.type === 'hidden-cell')) newIndex -= cols;
+                    if (newIndex < 0) newIndex = -1;
+                }
+
+                if (newIndex !== -1 && newIndex >= 0 && newIndex < rows * cols) {
+                    e.preventDefault(); 
+                    cellsArray[newIndex].click(); 
+                    cellsArray[newIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
+            }
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length > 0) processFile(e.target.files[0]); });
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length > 0) processFile(e.dataTransfer.files[0]); });
+        document.addEventListener('paste', (e) => {
+            if (!selectedCell || selectedCell.dataset.type !== 'image') return;
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) { processFile(items[i].getAsFile()); break; }
+            }
+        });
+
+        /* --- NY VERSION MED BILD-KRYMPNING --- */
+        function processFile(file) {
+            if (!selectedCell || selectedCell.dataset.type !== 'image') return;
+            if (!file.type.match('image.*')) return alert("Filen måste vara en bild!");
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 300; // Maxbredd för att spara enormt mycket plats
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Skapar en lättviktig JPEG med 80% kvalitet
+                    const base64data = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    selectedCell.dataset.imgurl = base64data;
+                    refreshSingleCellUI(selectedCell);
+                    cellImageUrlInput.value = "(Sparad bild)";
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function getGridData() {
+            return cellsArray.map(c => ({
+                type: c.dataset.type,
+                answer: c.dataset.answer,
+                clue: c.dataset.clue,
+                imgurl: c.dataset.imgurl,
+                colspan: c.dataset.colspan,
+                rowspan: c.dataset.rowspan,
+                arrow: c.dataset.arrow
+            }));
+        }
+
+        /* --- BLOB SPARANDE FÖR BÄTTRE DATA-HANTERING --- */
+        function downloadDraftFile() {
+            const saveObject = { 
+                rows: rows, 
+                cols: cols, 
+                title: puzzleTitleInput.value,
+                author: puzzleAuthorInput.value,
+                theme: puzzleThemeInput.value,
+                data: getGridData() 
+            };
+            const blob = new Blob([JSON.stringify(saveObject)], { type: "application/json;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", url);
+            downloadAnchorNode.setAttribute("download", "korsord_utkast.json");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadDraftFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let parsed = JSON.parse(e.target.result);
+                    let gridData;
+                    if (Array.isArray(parsed)) {
+                        rows = 24; cols = 22; gridData = parsed;
+                    } else {
+                        rows = parsed.rows; cols = parsed.cols; gridData = parsed.data;
+                        
+                        if (parsed.title !== undefined) {
+                            puzzleTitleInput.value = parsed.title;
+                            displayTitle.innerText = parsed.title;
+                        }
+                        if (parsed.author !== undefined) {
+                            puzzleAuthorInput.value = parsed.author;
+                            displayAuthor.innerText = parsed.author;
+                        }
+                        if (parsed.theme !== undefined) {
+                            puzzleThemeInput.value = parsed.theme;
+                            displayTheme.innerText = parsed.theme ? "Fråga: " + parsed.theme : "";
+                            displayTheme.style.display = parsed.theme ? "inline-block" : "none";
+                        } else {
+                            puzzleThemeInput.value = "";
+                            displayTheme.style.display = "none";
+                        }
+                    }
+                    if(gridData.length !== rows * cols) return alert("Fel storlek på utkastet!");
+                    
+                    if(selectedCell) selectedCell.classList.remove('selected');
+                    editor.classList.add('hidden');
+                    
+                    buildGrid(gridData);
+                    document.getElementById('loadInput').value = '';
+                    lastSavedText.innerText = "Laddade in pussel från fil!";
+                } catch(err) {
+                    alert("Kunde inte läsa filen. Är du säker på att det är ett korsords-utkast?");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function printPuzzle(isEmpty) {
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+                editor.classList.add('hidden');
+                selectedCell = null;
+            }
+            workspaceWrapper.style.transform = `scale(1)`;
+            zoomLevelText.innerText = '100%';
+            currentZoom = 1.0;
+
+            if (isEmpty) {
+                document.body.classList.add('print-empty');
+            } else {
+                document.body.classList.remove('print-empty');
+            }
+            
+            window.print();
+            
+            setTimeout(() => {
+                document.body.classList.remove('print-empty');
+            }, 1000);
+        }
+
+        function exportPlayableGame() {
+            const gameTitle = puzzleTitleInput.value || "Korsord";
+            const gameAuthor = puzzleAuthorInput.value || "";
+            const gameTheme = puzzleThemeInput.value || "";
+            
+            const gameData = JSON.stringify({ 
+                rows: rows, 
+                cols: cols, 
+                title: gameTitle,
+                author: gameAuthor,
+                theme: gameTheme,
+                data: getGridData() 
+            });
+            
+            let htmlLines = [
+                "<!DOCTYPE html>",
+                "<html lang='sv'>",
+                "<head>",
+                "    <meta charset='UTF-8'>",
+                "    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>",
+                `    <title>${gameTitle}</title>`,
+                "    <style>",
+                "        body { font-family: Arial, sans-serif; background-color: #222; margin: 0; padding: 0 0 100px 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: white; text-align: center; }",
+                "        .header-container { text-align: center; margin: 0 auto; padding: 20px; width: 100%; max-width: 600px; box-sizing: border-box; }",
+                "        .header-container h1 { margin: 0; font-size: 24px; text-transform: uppercase; color: #fff; letter-spacing: 1px; border-bottom: 1px solid #555; padding-bottom: 8px; }",
+                "        .header-container p { margin: 8px 0 0 0; font-size: 13px; font-style: italic; color: #aaa; }",
+                "        .theme-box { background: #333; color: #ffeb3b; padding: 10px 15px; border-radius: 8px; margin-top: 15px; font-weight: bold; display: inline-block; font-size: 15px; border: 1px solid #555; }",
+                "        .link-bar { margin-top: 15px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }",
+                "        .top-btn { display: inline-block; color: #fff; text-decoration: none; font-size: 12px; font-weight: bold; background: #333; padding: 8px 16px; border-radius: 20px; border: 1px solid #555; cursor: pointer; transition: all 0.2s ease; }",
+                "        .top-btn:hover { background: #444; border-color: #777; }",
+                "        .top-btn.print-btn { background: #007bff; border-color: #0056b3; }",
+                "        .top-btn.print-btn:hover { background: #0056b3; }",
+                "        .floating-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: rgba(20, 20, 20, 0.95); padding: 10px 15px; border-radius: 40px; border: 1px solid #555; display: flex; align-items: center; gap: 15px; z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.6); white-space: nowrap; }",
+                "        #scoreCounter { color: #fff; font-size: 15px; font-weight: bold; margin-left: 5px; }",
+                "        #helpBtn { background-color: #ffc107; color: #000; padding: 8px 18px; border: none; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }",
+                "        #helpBtn:hover { background-color: #e0a800; }",
+                "        .grid-container { display: grid; gap: 0; background-color: transparent; padding: 2px; width: max-content; margin: 0 auto; position: relative; }",
+                "        .cell { border: 1px solid #000; position: relative; background-color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; user-select: none; text-align: center; overflow: hidden; word-wrap: break-word; line-height: 1.1; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; color: #000; }",
+                "        .cell-arrow { position: absolute; top: 2px; right: 2px; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }",
+                "        .cell.clue { background-color: #ffffff; font-size: 12px; font-weight: normal; }",
+                "        .cell.gray { background-color: #d8d8d8; }",
+                "        .cell.black { background-color: #333333; }",
+                "        .cell.image { background-color: #fff; }",
+                "        .cell.hidden-cell { background-color: transparent; border-color: transparent; pointer-events: none; }",
+                "        .cell.split-diag { background: linear-gradient(to bottom right, #eeeeee 48%, #333 49%, #333 51%, #ffffff 52%); }",
+                "        .cell.split-horiz-top { background: linear-gradient(to bottom, #eeeeee 48%, #333 49%, #333 51%, #ffffff 52%); }",
+                "        .cell.split-horiz-bottom { background: linear-gradient(to bottom, #ffffff 48%, #333 49%, #333 51%, #eeeeee 52%); }",
+                "        .cell.split-diag .split-clue { position: absolute; top: 2px; left: 2px; width: 65%; text-align: left; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }",
+                "        .cell.split-horiz-top .split-clue { position: absolute; top: 2px; left: 2px; width: 56px; text-align: center; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }",
+                "        .cell.split-horiz-bottom .split-clue { position: absolute; bottom: 2px; left: 2px; width: 56px; text-align: center; font-weight: normal; line-height: 1.1; word-wrap: break-word; color: #000; }",
+                "        .cell.selected { outline: 3px solid #ff007f; z-index: 10; background-color: #ffe6f0; }",
+                "        .cell.correct { color: #155724; }",
+                "        #mobileInput { position: absolute; opacity: 0; width: 1px; height: 1px; border: none; padding: 0; margin: 0; pointer-events: none; }",
+                "        #winOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; }",
+                "        #winOverlay h1 { font-size: 50px; margin-bottom: 10px; color: #ffeb3b; }",
+                "        #winOverlay p { font-size: 20px; }",
+                "        @media print {",
+                "            body { background-color: white !important; padding: 0 !important; margin: 0 !important; color: black !important; }",
+                "            .header-container { padding-top: 0 !important; margin-bottom: 30px !important; }",
+                "            .header-container h1 { color: black !important; border-color: #999 !important; }",
+                "            .header-container p { color: #555 !important; }",
+                "            .theme-box { background: transparent !important; color: #000 !important; border: 2px solid #000 !important; box-shadow: none !important; }",
+                "            .floating-bar, .link-bar, #winOverlay, #mobileInput { display: none !important; }",
+                "            .player-letter { display: none !important; }",
+                "            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }",
+                "            .cell.selected { outline: none !important; }",
+                "        }",
+                "    </style>",
+                "</head>",
+                "<body>",
+                "    <div class='header-container'>",
+                `        <h1>${gameTitle}</h1>`,
+                `        <p>${gameAuthor}</p>`,
+                `        ${gameTheme ? `<div class='theme-box'>${gameTheme}</div>` : ""}`,
+                "        <div class='link-bar'>",
+                "            <a href='index.html' class='top-btn'>← Alla korsord</a>",
+                "            <button onclick='window.print()' class='top-btn print-btn'>🖨️ Skriv ut / PDF</button>",
+                "        </div>",
+                "    </div>",
+                "    <div class='floating-bar'>",
+                "        <div id='scoreCounter'>0 / 0 rätt</div>",
+                "        <button id='helpBtn'>💡 Avslöja</button>",
+                "    </div>",
+                "    <div id='winOverlay'>",
+                "        <h1>🎉 GRATTIS! 🎉</h1>",
+                "        <p>Du har löst hela korsordet!</p>",
+                "        <a href='index.html' class='top-btn' style='margin-top: 20px;'>Gå till menyn</a>",
+                "    </div>",
+                "    <input type='text' id='mobileInput' autocomplete='off' spellcheck='false'>",
+                "    <div id='grid' class='grid-container'></div>",
+                "    <script>",
+                "        const gameData = " + gameData + ";",
+                "        const rows = gameData.rows;",
+                "        const cols = gameData.cols;",
+                "        const gridData = gameData.data;",
+                "        const gridElement = document.getElementById('grid');",
+                "        const mobileInput = document.getElementById('mobileInput');",
+                "        const helpBtn = document.getElementById('helpBtn');",
+                "        let cellsArray = [];",
+                "        let selectedCell = null;",
+                "        let totalLetters = 0;",
+                "        ",
+                "        function adjustFontSize(cell, text) {",
+                "            const len = text.length;",
+                "            if (len <= 8) cell.style.fontSize = '12px';",
+                "            else if (len <= 15) cell.style.fontSize = '10px';",
+                "            else if (len <= 25) cell.style.fontSize = '9px';",
+                "            else cell.style.fontSize = '8px';",
+                "        }",
+                "        ",
+                "        gridElement.style.gridTemplateColumns = `repeat(${cols}, 60px)`;",
+                "        gridElement.style.gridAutoRows = `60px`;",
+                "        ",
+                "        for (let i = 0; i < rows * cols; i++) {",
+                "            const d = gridData[i];",
+                "            const cell = document.createElement('div');",
+                "            cell.classList.add('cell');",
+                "            if (d.type !== 'white') cell.classList.add(d.type);",
+                "            ",
+                "            cell.dataset.index = i;",
+                "            cell.dataset.type = d.type;",
+                "            cell.dataset.answer = d.answer;",
+                "            cell.dataset.colspan = d.colspan;",
+                "            cell.dataset.rowspan = d.rowspan;",
+                "            ",
+                "            if (d.answer && d.answer !== '') totalLetters++;",
+                "            ",
+                "            if (d.type === 'image' && d.imgurl) {",
+                "                cell.style.backgroundImage = `url('${d.imgurl}')`;",
+                "            }",
+                "            ",
+                "            if (d.type === 'clue') {",
+                "                cell.innerText = d.clue;",
+                "                adjustFontSize(cell, d.clue);",
+                "            } else if (['split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(d.type)) {",
+                "                if (d.clue) {",
+                "                    const clueSpan = document.createElement('div');",
+                "                    clueSpan.className = 'split-clue';",
+                "                    clueSpan.innerText = d.clue;",
+                "                    const len = d.clue.length;",
+                "                    if (d.type === 'split-horiz-top' || d.type === 'split-horiz-bottom') {",
+                "                        if (len > 25) clueSpan.style.fontSize = '6px';",
+                "                        else if (len > 15) clueSpan.style.fontSize = '7px';",
+                "                        else clueSpan.style.fontSize = '8px';",
+                "                    } else {",
+                "                        if (len > 18) clueSpan.style.fontSize = '6px';",
+                "                        else if (len > 10) clueSpan.style.fontSize = '7px';",
+                "                        else clueSpan.style.fontSize = '8px';",
+                "                    }",
+                "                    cell.appendChild(clueSpan);",
+                "                }",
+                "            }",
+                "            ",
+                "            if (d.arrow && ['white', 'gray', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(d.type)) {",
+                "                const arrowSpan = document.createElement('span');",
+                "                arrowSpan.className = 'cell-arrow';",
+                "                arrowSpan.innerText = d.arrow;",
+                "                cell.appendChild(arrowSpan);",
+                "            }",
+                "            ",
+                "            if (['white', 'gray', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(d.type)) {",
+                "                const letterSpan = document.createElement('span');",
+                "                if(d.type.startsWith('split')) letterSpan.className = 'split-answer player-letter'; else letterSpan.className = 'player-letter';",
+                "                cell.appendChild(letterSpan);",
+                "                cell.letterSpan = letterSpan;",
+                "                ",
+                "                cell.addEventListener('click', function() {",
+                "                    if (selectedCell) selectedCell.classList.remove('selected');",
+                "                    selectedCell = this;",
+                "                    this.classList.add('selected');",
+                "                    const rect = this.getBoundingClientRect();",
+                "                    mobileInput.style.top = (window.scrollY + rect.top) + 'px';",
+                "                    mobileInput.style.left = (window.scrollX + rect.left) + 'px';",
+                "                    mobileInput.focus();",
+                "                });",
+                "            }",
+                "            ",
+                "            cellsArray.push(cell);",
+                "            gridElement.appendChild(cell);",
+                "        }",
+                "        ",
+                "        cellsArray.forEach((c, index) => {",
+                "            const cSpan = parseInt(c.dataset.colspan) || 1;",
+                "            const rSpan = parseInt(c.dataset.rowspan) || 1;",
+                "            if (cSpan > 1 || rSpan > 1) {",
+                "                c.style.gridColumn = `span ${cSpan}`;",
+                "                c.style.gridRow = `span ${rSpan}`;",
+                "                const startRow = Math.floor(index / cols);",
+                "                const startCol = index % cols;",
+                "                for (let r = 0; r < rSpan; r++) {",
+                "                    for (let col_idx = 0; col_idx < cSpan; col_idx++) {",
+                "                        if (r === 0 && col_idx === 0) continue;",
+                "                        const targetRow = startRow + r;",
+                "                        const targetCol = startCol + col_idx;",
+                "                        if (targetRow < rows && targetCol < cols) {",
+                "                            cellsArray[targetRow * cols + targetCol].style.display = 'none';",
+                "                        }",
+                "                    }",
+                "                }",
+                "            }",
+                "        });",
+                "        ",
+                "        mobileInput.addEventListener('input', function(e) {",
+                "            if (!selectedCell) return;",
+                "            const val = this.value.toUpperCase();",
+                "            this.value = '';",
+                "            if (val.match(/^[A-ZÅÄÖ]$/)) {",
+                "                selectedCell.letterSpan.innerText = val;",
+                "                selectedCell.letterSpan.style.color = '#000';", 
+                "                checkWinCondition();",
+                "            }",
+                "        });",
+                "        ",
+                "        document.addEventListener('keydown', function(e) {",
+                "            if (!selectedCell) return;",
+                "            if (e.key === 'Backspace' || e.key === 'Delete') {",
+                "                selectedCell.letterSpan.innerText = '';",
+                "                checkWinCondition();",
+                "                return;",
+                "            }",
+                "            if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) {",
+                "                let currentIndex = parseInt(selectedCell.dataset.index);",
+                "                let currentRow = Math.floor(currentIndex / cols);",
+                "                let currentCol = currentIndex % cols;",
+                "                let newIndex = -1;",
+                "                if (e.key === 'ArrowRight') {",
+                "                    newIndex = currentIndex + 1;",
+                "                    while (newIndex < (currentRow + 1) * cols && (cellsArray[newIndex].style.display === 'none' || !cellsArray[newIndex].letterSpan)) newIndex++;",
+                "                    if (newIndex >= (currentRow + 1) * cols) newIndex = -1;",
+                "                } else if (e.key === 'ArrowLeft') {",
+                "                    newIndex = currentIndex - 1;",
+                "                    while (newIndex >= currentRow * cols && (cellsArray[newIndex].style.display === 'none' || !cellsArray[newIndex].letterSpan)) newIndex--;",
+                "                    if (newIndex < currentRow * cols) newIndex = -1;",
+                "                } else if (e.key === 'ArrowDown') {",
+                "                    newIndex = currentIndex + cols;",
+                "                    while (newIndex < rows * cols && (cellsArray[newIndex].style.display === 'none' || !cellsArray[newIndex].letterSpan)) newIndex += cols;",
+                "                    if (newIndex >= rows * cols) newIndex = -1;",
+                "                } else if (e.key === 'ArrowUp') {",
+                "                    newIndex = currentIndex - cols;",
+                "                    while (newIndex >= 0 && (cellsArray[newIndex].style.display === 'none' || !cellsArray[newIndex].letterSpan)) newIndex -= cols;",
+                "                    if (newIndex < 0) newIndex = -1;",
+                "                }",
+                "                if (newIndex !== -1 && newIndex >= 0 && newIndex < rows * cols) {",
+                "                    e.preventDefault();",
+                "                    cellsArray[newIndex].click();",
+                "                    cellsArray[newIndex].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });",
+                "                }",
+                "            }",
+                "        });",
+                "        ",
+                "        helpBtn.addEventListener('click', function() {",
+                "            if (!selectedCell || !selectedCell.letterSpan) {",
+                "                alert('Markera en skrivruta först för att få hjälp!');",
+                "                return;",
+                "            }",
+                "            if (selectedCell.dataset.answer && selectedCell.dataset.answer !== '') {",
+                "                selectedCell.letterSpan.innerText = selectedCell.dataset.answer;",
+                "                selectedCell.letterSpan.style.color = '#007bff';",
+                "                checkWinCondition();",
+                "            }",
+                "        });",
+                "        ",
+                "        function checkWinCondition() {",
+                "            let correctCount = 0;",
+                "            let hasAnswers = false;",
+                "            cellsArray.forEach(c => {",
+                "                if (c.dataset.answer && c.dataset.answer !== '') {",
+                "                    hasAnswers = true;",
+                "                    if (c.letterSpan && c.letterSpan.innerText === c.dataset.answer) {",
+                "                        correctCount++;",
+                "                    }",
+                "                }",
+                "            });",
+                "            ",
+                "            const scoreCounter = document.getElementById('scoreCounter');",
+                "            if (scoreCounter) {",
+                "                scoreCounter.innerText = correctCount + ' / ' + totalLetters + ' rätt';",
+                "            }",
+                "            ",
+                "            if (hasAnswers && correctCount > 0 && correctCount === totalLetters) {",
+                "                document.getElementById('winOverlay').style.display = 'flex';",
+                "                mobileInput.blur();",
+                "            }",
+                "        }",
+                "        ",
+                "        checkWinCondition();",
+                "    <\/script>",
+                "</body>",
+                "</html>"
+            ].join("\n");
+
+            const blob = new Blob([htmlLines], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", url);
+            downloadAnchorNode.setAttribute("download", "mitt_korsord_spel.html");
+            document.body.appendChild(downloadAnchorNode); 
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function autoSaveToBrowser() {
+            if (!autoSaveToggle.checked) return;
+            const saveObject = { 
+                rows: rows, 
+                cols: cols, 
+                title: puzzleTitleInput.value,
+                author: puzzleAuthorInput.value,
+                theme: puzzleThemeInput.value,
+                data: getGridData() 
+            };
+            localStorage.setItem('korsord_autosave', JSON.stringify(saveObject));
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            lastSavedText.innerText = "Autosparad i webbläsaren: " + timeString;
+        }
+
+        setInterval(autoSaveToBrowser, 5000);
+
+        window.onload = function() {
+            const savedData = localStorage.getItem('korsord_autosave');
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    let gridData;
+                    if (Array.isArray(parsed)) {
+                        rows = 24; cols = 22; gridData = parsed;
+                    } else {
+                        rows = parsed.rows; cols = parsed.cols; gridData = parsed.data;
+                        
+                        if (parsed.title !== undefined) {
+                            puzzleTitleInput.value = parsed.title;
+                            displayTitle.innerText = parsed.title;
+                        }
+                        if (parsed.author !== undefined) {
+                            puzzleAuthorInput.value = parsed.author;
+                            displayAuthor.innerText = parsed.author;
+                        }
+                        if (parsed.theme !== undefined) {
+                            puzzleThemeInput.value = parsed.theme;
+                            displayTheme.innerText = parsed.theme ? "Fråga: " + parsed.theme : "";
+                            displayTheme.style.display = parsed.theme ? "inline-block" : "none";
+                        } else {
+                            puzzleThemeInput.value = "";
+                            displayTheme.style.display = "none";
+                        }
+                    }
+
+                    if(gridData.length === rows * cols) {
+                        buildGrid(gridData);
+                        lastSavedText.innerText = "Återställde ditt senaste utkast automatiskt!";
+                    }
+                } catch(err) {
+                    console.error("Kunde inte ladda autosparat utkast.");
+                }
+            }
+        };
+    </script>
+
+</body>
+</html>
