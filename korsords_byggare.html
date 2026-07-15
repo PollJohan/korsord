@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Min Korsordsbyggare v6.5</title>
+    <title>Min Korsordsbyggare v6.11</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 60px 20px 20px 20px; margin: 0; }
         
@@ -28,7 +28,12 @@
         
         .cell { border: 1px solid #000; position: relative; background-color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; user-select: none; text-align: center; overflow: hidden; word-wrap: break-word; line-height: 1.1; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; }
         
-        .cell-arrow { position: absolute; top: 2px; right: 2px; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }
+        /* NY PIL-POSITIONERING */
+        .cell-arrow { position: absolute; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }
+        .arrow-tr { top: 2px; right: 2px; }
+        .arrow-tl { top: 2px; left: 2px; }
+        .arrow-br { bottom: 2px; right: 2px; }
+        .arrow-bl { bottom: 2px; left: 2px; }
 
         .cell.clue { background-color: #ffffff; font-size: 12px; font-weight: normal; } 
         .cell.gray { background-color: #d8d8d8; } 
@@ -104,6 +109,10 @@
             .cell.selected { outline: none !important; }
             body.print-empty .answer-text, body.print-empty .split-answer { display: none !important; }
         }
+        
+        .app-switch-box { background: #e8f4ff; padding: 10px; margin-bottom: 15px; border-radius: 6px; text-align: center; border: 1px solid #b8daff; }
+        .app-switch-box a { color: #007bff; text-decoration: none; font-weight: bold; font-size: 13px; display: inline-block; transition: all 0.2s; }
+        .app-switch-box a:hover { color: #0056b3; transform: scale(1.05); }
     </style>
 </head>
 <body>
@@ -135,6 +144,18 @@
             <span>🛠 Verktyg</span>
             <span style="font-size: 11px; font-weight: normal; opacity: 0.8;">(Dra mig)</span>
         </div>
+
+        <div class="app-switch-box">
+            <a href="byggare_lista.html">🔄 Byt till List-Byggaren</a>
+        </div>
+
+        <label style="margin-top:0;">Skapa nytt (Raderar nuvarande!)</label>
+        <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+            <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(10, 10)">10x10</button>
+            <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(15, 15)">15x15</button>
+            <button class="btn" style="background:#dc3545;" onclick="createNewPuzzle(22, 24)">Standard</button>
+        </div>
+        <hr style="margin-top:0;">
         
         <label style="margin-top:0;">Korsordsinfo</label>
         <input type="text" id="puzzleTitle" placeholder="Titel (t.ex. Korsord 1/26)" value="Korsord 1/26">
@@ -150,7 +171,13 @@
                 <button type="button" onclick="pasteCell()">Klistra in</button>
             </div>
 
-            <label>Typ av ruta:</label>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                <label style="margin-top: 0; margin-bottom: 0;">Typ av ruta:</label>
+                <label style="font-size: 12px; font-weight: bold; margin-top: 0; margin-bottom: 0; cursor: pointer; color: #d63384;">
+                    <input type="checkbox" id="paintModeCheckbox"> 🖌️ Penselläge (Lås)
+                </label>
+            </div>
+            
             <div class="type-buttons">
                 <button type="button" data-type="white" class="type-btn active">Vit (Bokst.)</button>
                 <button type="button" data-type="gray" class="type-btn">Grå (Bokst.)</button>
@@ -170,6 +197,14 @@
                 <input type="text" id="cellAnswer" maxlength="1" placeholder="T.ex. A">
                 
                 <label style="margin-top: 10px; font-size: 12px; font-weight: normal;">Liten pil i hörnet (valfritt):</label>
+                <!-- NY RULLGARDIN FÖR PILENS POSITION -->
+                <select id="arrowPosition" style="margin-bottom: 5px; font-size: 12px; padding: 4px;" onchange="updateArrowPosition()">
+                    <option value="tr">Uppe till höger</option>
+                    <option value="br">Nere till höger</option>
+                    <option value="tl">Uppe till vänster</option>
+                    <option value="bl">Nere till vänster</option>
+                </select>
+
                 <div class="arrow-buttons">
                     <button type="button" onclick="setCellCornerArrow('→')">→</button>
                     <button type="button" onclick="setCellCornerArrow('↘')">↘</button>
@@ -188,6 +223,8 @@
                     <button type="button" onclick="setCellCornerArrow('↱')">↱</button>
                     <button type="button" onclick="setCellCornerArrow('↰')">↰</button>
                     <button type="button" onclick="setCellCornerArrow('↴')">↴</button>
+                    
+                    <button type="button" onclick="setCellCornerArrow('[L-NER]')"><span style="display:inline-block; transform:scaleX(-1); line-height:1;">↴</span></button>
                     
                     <button type="button" onclick="setCellCornerArrow('↵')">↵</button>
                     <button type="button" onclick="setCellCornerArrow('⤶')">⤶</button>
@@ -220,6 +257,8 @@
                     <button type="button" onclick="insertClueArrow('↰')">↰</button>
                     <button type="button" onclick="insertClueArrow('↴')">↴</button>
                     
+                    <button type="button" onclick="insertClueArrow('[L-NER]')"><span style="display:inline-block; transform:scaleX(-1); line-height:1;">↴</span></button>
+
                     <button type="button" onclick="insertClueArrow('↵')">↵</button>
                     <button type="button" onclick="insertClueArrow('⤶')">⤶</button>
                     <button type="button" onclick="insertClueArrow('⤷')">⤷</button>
@@ -277,7 +316,7 @@
         </div>
         
         <hr style="margin: 15px 0;">
-        <label style="margin-top:0;">Publicera & Skriv ut (Fusk)</label>
+        <label style="margin-top:0;">Publicera & Skriv ut</label>
         
         <button class="btn btn-export" onclick="exportPlayableGame()" style="width: 100%;">Exportera Spel (HTML) 🚀</button>
         
@@ -306,6 +345,7 @@
         const cellImageUrlInput = document.getElementById('cellImageUrl');
         const cellColSpanInput = document.getElementById('cellColSpan');
         const cellRowSpanInput = document.getElementById('cellRowSpan');
+        const arrowPositionSelect = document.getElementById('arrowPosition'); // NY REFERENS FÖR POSITION
         
         const whiteSettings = document.getElementById('whiteSettings');
         const clueSettings = document.getElementById('clueSettings');
@@ -326,16 +366,53 @@
         const lastSavedText = document.getElementById('lastSavedText');
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const gridSizeText = document.getElementById('gridSizeText');
+        const paintModeCheckbox = document.getElementById('paintModeCheckbox'); 
         
         let rows = 24;
         let cols = 22;
         let selectedCell = null;
         let cellsArray = [];
         let clipboardData = null;
+        let currentTool = 'white'; 
 
         let currentZoom = 1.0;
         const workspaceWrapper = document.getElementById('workspaceWrapper');
         const zoomLevelText = document.getElementById('zoomLevelText');
+
+        function formatClueText(text) {
+            if (!text) return '';
+            return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\[L-NER\]/g, '<span style="display:inline-block; transform:scaleX(-1); line-height:1;">↴</span>');
+        }
+        
+        function getClueLength(text) {
+            if (!text) return 0;
+            return text.replace(/\[L-NER\]/g, 'A').length;
+        }
+
+        function createNewPuzzle(newRows, newCols) {
+            if (!confirm("Vill du verkligen börja om? Allt som inte är sparat till en fil kommer att försvinna!")) return;
+            rows = newRows;
+            cols = newCols;
+            
+            puzzleTitleInput.value = "Nytt Korsord";
+            puzzleAuthorInput.value = "gjort av Pöll-Johan Lindroos / Habla Games";
+            puzzleThemeInput.value = "";
+            displayTitle.innerText = "Nytt Korsord";
+            displayAuthor.innerText = "gjort av Pöll-Johan Lindroos / Habla Games";
+            displayTheme.style.display = 'none';
+            
+            localStorage.removeItem('korsord_autosave'); 
+            
+            if(selectedCell) {
+                selectedCell.classList.remove('selected');
+                editor.classList.add('hidden');
+                selectedCell = null;
+            }
+            
+            buildGrid(null); 
+            autoSaveToBrowser();
+            lastSavedText.innerText = "Skapade ett nytt tomt rutnät.";
+        }
 
         puzzleTitleInput.addEventListener('input', function() {
             displayTitle.innerText = this.value;
@@ -392,11 +469,10 @@
             document.removeEventListener('mouseup', stopPanelDrag);
         }
 
-        function adjustFontSize(cell, text) {
-            const len = text.length;
-            if (len <= 8) cell.style.fontSize = "12px";
-            else if (len <= 15) cell.style.fontSize = "10px";
-            else if (len <= 25) cell.style.fontSize = "9px";
+        function adjustFontSize(cell, textLength) {
+            if (textLength <= 8) cell.style.fontSize = "12px";
+            else if (textLength <= 15) cell.style.fontSize = "10px";
+            else if (textLength <= 25) cell.style.fontSize = "9px";
             else cell.style.fontSize = "8px";
         }
 
@@ -479,14 +555,16 @@
                     cell.dataset.colspan = d.colspan || '1';
                     cell.dataset.rowspan = d.rowspan || '1';
                     cell.dataset.arrow = d.arrow || ''; 
+                    cell.dataset.arrowpos = d.arrowpos || 'tr'; // LÄS IN POSITION
                 } else {
-                    cell.dataset.type = 'hidden-cell';
+                    cell.dataset.type = 'white';
                     cell.dataset.answer = '';
                     cell.dataset.clue = '';
                     cell.dataset.imgurl = '';
                     cell.dataset.colspan = '1';
                     cell.dataset.rowspan = '1';
                     cell.dataset.arrow = '';
+                    cell.dataset.arrowpos = 'tr';
                 }
 
                 refreshSingleCellUI(cell);
@@ -495,6 +573,15 @@
                 cell.addEventListener('click', function() {
                     if (selectedCell) selectedCell.classList.remove('selected');
                     selectedCell = this;
+
+                    if (paintModeCheckbox.checked) {
+                        selectedCell.dataset.type = currentTool;
+                        selectedCell.dataset.colspan = '1';
+                        selectedCell.dataset.rowspan = '1';
+                        refreshSingleCellUI(selectedCell);
+                        renderGridSpans();
+                    }
+
                     selectedCell.classList.add('selected');
                     editor.classList.remove('hidden');
                     updatePanelFromSelectedCell();
@@ -522,7 +609,7 @@
                     if (oldR >= 0 && oldR < rows && oldC >= 0 && oldC < cols) {
                         newData.push(currentData[oldR * cols + oldC]);
                     } else {
-                        newData.push({ type: 'hidden-cell', answer: '', clue: '', imgurl: '', colspan: '1', rowspan: '1', arrow: '' });
+                        newData.push({ type: 'white', answer: '', clue: '', imgurl: '', colspan: '1', rowspan: '1', arrow: '', arrowpos: 'tr' });
                     }
                 }
             }
@@ -546,7 +633,8 @@
                 imgurl: selectedCell.dataset.imgurl,
                 colspan: selectedCell.dataset.colspan,
                 rowspan: selectedCell.dataset.rowspan,
-                arrow: selectedCell.dataset.arrow
+                arrow: selectedCell.dataset.arrow,
+                arrowpos: selectedCell.dataset.arrowpos // KOPIERA POSITION
             };
         }
 
@@ -560,6 +648,7 @@
             selectedCell.dataset.colspan = '1';
             selectedCell.dataset.rowspan = '1';
             selectedCell.dataset.arrow = '';
+            selectedCell.dataset.arrowpos = 'tr';
             refreshSingleCellUI(selectedCell);
             updatePanelFromSelectedCell();
             renderGridSpans();
@@ -574,6 +663,7 @@
             selectedCell.dataset.colspan = clipboardData.colspan;
             selectedCell.dataset.rowspan = clipboardData.rowspan;
             selectedCell.dataset.arrow = clipboardData.arrow || '';
+            selectedCell.dataset.arrowpos = clipboardData.arrowpos || 'tr'; // KLISTRA IN POSITION
             refreshSingleCellUI(selectedCell);
             updatePanelFromSelectedCell();
             renderGridSpans();
@@ -601,23 +691,23 @@
                 }
                 if (cell.dataset.arrow) {
                     const arrowSpan = document.createElement('span');
-                    arrowSpan.className = 'cell-arrow';
-                    arrowSpan.innerText = cell.dataset.arrow;
+                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); // LÄGG TILL KLASS
+                    arrowSpan.innerHTML = formatClueText(cell.dataset.arrow);
                     cell.appendChild(arrowSpan);
                 }
 
             } else if (cell.dataset.type === 'clue') {
-                cell.innerText = cell.dataset.clue;
-                adjustFontSize(cell, cell.dataset.clue);
+                cell.innerHTML = formatClueText(cell.dataset.clue);
+                adjustFontSize(cell, getClueLength(cell.dataset.clue));
                 
             } else if (['split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(cell.dataset.type)) {
                 
                 if (cell.dataset.clue) {
                     const clueSpan = document.createElement('div');
                     clueSpan.className = 'split-clue';
-                    clueSpan.innerText = cell.dataset.clue;
+                    clueSpan.innerHTML = formatClueText(cell.dataset.clue);
                     
-                    const len = cell.dataset.clue.length;
+                    const len = getClueLength(cell.dataset.clue);
                     if (cell.dataset.type === 'split-horiz-top' || cell.dataset.type === 'split-horiz-bottom') {
                         if (len > 25) clueSpan.style.fontSize = "6px";
                         else if (len > 15) clueSpan.style.fontSize = "7px";
@@ -639,18 +729,27 @@
                 
                 if (cell.dataset.arrow) {
                     const arrowSpan = document.createElement('span');
-                    arrowSpan.className = 'cell-arrow';
-                    arrowSpan.innerText = cell.dataset.arrow;
+                    arrowSpan.className = 'cell-arrow arrow-' + (cell.dataset.arrowpos || 'tr'); // LÄGG TILL KLASS
+                    arrowSpan.innerHTML = formatClueText(cell.dataset.arrow);
                     cell.appendChild(arrowSpan);
                 }
             }
         }
 
+        // NY FUNKTION FÖR ATT UPPDATERA PILENS POSITION I REALTID
+        function updateArrowPosition() {
+            if (!selectedCell) return;
+            selectedCell.dataset.arrowpos = arrowPositionSelect.value;
+            refreshSingleCellUI(selectedCell);
+        }
+
         function updatePanelFromSelectedCell() {
             if(!selectedCell) return;
             
+            currentTool = selectedCell.dataset.type;
+
             typeButtons.forEach(b => b.classList.remove('active'));
-            const activeBtn = document.querySelector(`.type-btn[data-type="${selectedCell.dataset.type}"]`);
+            const activeBtn = document.querySelector(`.type-btn[data-type="${currentTool}"]`);
             if(activeBtn) activeBtn.classList.add('active');
 
             cellAnswerInput.value = selectedCell.dataset.answer;
@@ -658,6 +757,7 @@
             cellImageUrlInput.value = selectedCell.dataset.imgurl.startsWith('data:image') ? '(Sparad bild)' : selectedCell.dataset.imgurl;
             cellColSpanInput.value = selectedCell.dataset.colspan;
             cellRowSpanInput.value = selectedCell.dataset.rowspan;
+            arrowPositionSelect.value = selectedCell.dataset.arrowpos || 'tr'; // MATCHA RULLGARDIN
 
             const type = selectedCell.dataset.type;
             whiteSettings.classList.add('hidden');
@@ -696,6 +796,7 @@
                 selectedCell.dataset.type = this.dataset.type;
                 selectedCell.dataset.colspan = '1';
                 selectedCell.dataset.rowspan = '1';
+                currentTool = this.dataset.type; 
                 refreshSingleCellUI(selectedCell);
                 renderGridSpans();
                 updatePanelFromSelectedCell();
@@ -786,6 +887,15 @@
 
                 if (newIndex !== -1 && newIndex >= 0 && newIndex < rows * cols) {
                     e.preventDefault(); 
+                    
+                    if (paintModeCheckbox.checked) {
+                        cellsArray[newIndex].dataset.type = currentTool;
+                        cellsArray[newIndex].dataset.colspan = '1';
+                        cellsArray[newIndex].dataset.rowspan = '1';
+                        refreshSingleCellUI(cellsArray[newIndex]);
+                        renderGridSpans();
+                    }
+                    
                     cellsArray[newIndex].click(); 
                     cellsArray[newIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
                 }
@@ -805,7 +915,6 @@
             }
         });
 
-        /* --- NY VERSION MED BILD-KRYMPNING --- */
         function processFile(file) {
             if (!selectedCell || selectedCell.dataset.type !== 'image') return;
             if (!file.type.match('image.*')) return alert("Filen måste vara en bild!");
@@ -815,7 +924,7 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 300; // Maxbredd för att spara enormt mycket plats
+                    const MAX_SIZE = 300; 
                     let width = img.width;
                     let height = img.height;
                     
@@ -836,7 +945,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Skapar en lättviktig JPEG med 80% kvalitet
                     const base64data = canvas.toDataURL('image/jpeg', 0.8);
                     
                     selectedCell.dataset.imgurl = base64data;
@@ -856,11 +964,11 @@
                 imgurl: c.dataset.imgurl,
                 colspan: c.dataset.colspan,
                 rowspan: c.dataset.rowspan,
-                arrow: c.dataset.arrow
+                arrow: c.dataset.arrow,
+                arrowpos: c.dataset.arrowpos // SPARA POSITIONEN I UTKAST
             }));
         }
 
-        /* --- BLOB SPARANDE FÖR BÄTTRE DATA-HANTERING --- */
         function downloadDraftFile() {
             const saveObject = { 
                 rows: rows, 
@@ -987,7 +1095,11 @@
                 "        #helpBtn:hover { background-color: #e0a800; }",
                 "        .grid-container { display: grid; gap: 0; background-color: transparent; padding: 2px; width: max-content; margin: 0 auto; position: relative; }",
                 "        .cell { border: 1px solid #000; position: relative; background-color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; user-select: none; text-align: center; overflow: hidden; word-wrap: break-word; line-height: 1.1; box-sizing: border-box; background-size: cover; background-position: center; background-repeat: no-repeat; color: #000; }",
-                "        .cell-arrow { position: absolute; top: 2px; right: 2px; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }",
+                "        .cell-arrow { position: absolute; font-size: 11px; font-weight: bold; color: #333; line-height: 1; z-index: 5; }",
+                "        .arrow-tr { top: 2px; right: 2px; }",
+                "        .arrow-tl { top: 2px; left: 2px; }",
+                "        .arrow-br { bottom: 2px; right: 2px; }",
+                "        .arrow-bl { bottom: 2px; left: 2px; }",
                 "        .cell.clue { background-color: #ffffff; font-size: 12px; font-weight: normal; }",
                 "        .cell.gray { background-color: #d8d8d8; }",
                 "        .cell.black { background-color: #333333; }",
@@ -1051,11 +1163,20 @@
                 "        let selectedCell = null;",
                 "        let totalLetters = 0;",
                 "        ",
-                "        function adjustFontSize(cell, text) {",
-                "            const len = text.length;",
-                "            if (len <= 8) cell.style.fontSize = '12px';",
-                "            else if (len <= 15) cell.style.fontSize = '10px';",
-                "            else if (len <= 25) cell.style.fontSize = '9px';",
+                "        function formatClueText(text) {",
+                "            if (!text) return '';",
+                "            return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\\[L-NER\\]/g, '<span style=\"display:inline-block; transform:scaleX(-1); line-height:1;\">↴</span>');",
+                "        }",
+                "        ",
+                "        function getClueLength(text) {",
+                "            if (!text) return 0;",
+                "            return text.replace(/\\[L-NER\\]/g, 'A').length;",
+                "        }",
+                "        ",
+                "        function adjustFontSize(cell, textLength) {",
+                "            if (textLength <= 8) cell.style.fontSize = '12px';",
+                "            else if (textLength <= 15) cell.style.fontSize = '10px';",
+                "            else if (textLength <= 25) cell.style.fontSize = '9px';",
                 "            else cell.style.fontSize = '8px';",
                 "        }",
                 "        ",
@@ -1073,6 +1194,7 @@
                 "            cell.dataset.answer = d.answer;",
                 "            cell.dataset.colspan = d.colspan;",
                 "            cell.dataset.rowspan = d.rowspan;",
+                "            cell.dataset.arrowpos = d.arrowpos || 'tr';",
                 "            ",
                 "            if (d.answer && d.answer !== '') totalLetters++;",
                 "            ",
@@ -1081,14 +1203,14 @@
                 "            }",
                 "            ",
                 "            if (d.type === 'clue') {",
-                "                cell.innerText = d.clue;",
-                "                adjustFontSize(cell, d.clue);",
+                "                cell.innerHTML = formatClueText(d.clue);",
+                "                adjustFontSize(cell, getClueLength(d.clue));",
                 "            } else if (['split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(d.type)) {",
                 "                if (d.clue) {",
                 "                    const clueSpan = document.createElement('div');",
                 "                    clueSpan.className = 'split-clue';",
-                "                    clueSpan.innerText = d.clue;",
-                "                    const len = d.clue.length;",
+                "                    clueSpan.innerHTML = formatClueText(d.clue);",
+                "                    const len = getClueLength(d.clue);",
                 "                    if (d.type === 'split-horiz-top' || d.type === 'split-horiz-bottom') {",
                 "                        if (len > 25) clueSpan.style.fontSize = '6px';",
                 "                        else if (len > 15) clueSpan.style.fontSize = '7px';",
@@ -1104,8 +1226,8 @@
                 "            ",
                 "            if (d.arrow && ['white', 'gray', 'split-diag', 'split-horiz-top', 'split-horiz-bottom'].includes(d.type)) {",
                 "                const arrowSpan = document.createElement('span');",
-                "                arrowSpan.className = 'cell-arrow';",
-                "                arrowSpan.innerText = d.arrow;",
+                "                arrowSpan.className = 'cell-arrow arrow-' + (d.arrowpos || 'tr');",
+                "                arrowSpan.innerHTML = formatClueText(d.arrow);",
                 "                cell.appendChild(arrowSpan);",
                 "            }",
                 "            ",
